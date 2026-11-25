@@ -480,6 +480,11 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual(dr.toRealList(['one', '\tsub', '\t\tdeep', '\tmore', 'two', '- three']), ['1. one', '\t1. sub', '\t\t1. deep', '\t2. more', '2. two', '3. three']);
     assert.deepStrictEqual(dr.toRealList(['1. Intro', '1.1. Background', '1.2.1. Detail', 'a. Other'], '  '), ['1. Intro', '  1. Background', '    1. Detail', '2. Other'], 'an outline written flat is nested by its numbers');
 
+    // An outline written as text made Obsidian's lists in place: only its numbers change, so the lines under them are under a list item again.
+    const written = ['---', 'tags: [a]', '---', '2. [[Responsible government]]', '\ti. **Summary**', '\tWords.', '', '\t2.1. [[Parliamentary accountability]]', '\t\ti. **Summary**', '', '\t\tii. **Function**', '\t\t1. [[Parliamentary oversight]]', '\t2.2 Confidence', '3.5 million', '```', '1.1. in code', '```'];
+    assert.deepStrictEqual(dr.outlineToReal(written), ['---', 'tags: [a]', '---', '2. [[Responsible government]]', '\ti. **Summary**', '\tWords.', '', '\t1. [[Parliamentary accountability]]', '\t\ti. **Summary**', '', '\t\tii. **Function**', '\t\t1. [[Parliamentary oversight]]', '\t2. Confidence', '3.5 million', '```', '1.1. in code', '```']);
+    assert.deepStrictEqual(dr.outlineToReal(['1. Intro', '1.1. Background', '1.2.1. Detail']), ['1. Intro', '\t1. Background', '\t\t1. Detail'], 'an outline written flat is not nested by its numbers');
+
     // In live preview: the label in the number's place, the number as typed where the cursor is; a label no wider than the number left be.
     const doc = '1. Intro\n\t1. Background\n\t2. Scope';
     const draw = (cursor) => {
@@ -525,6 +530,13 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(String(w.plugin.notes.get(w.file('B.md'), 'numbering')), '1.1');
     w.app.metadataCache.trigger('changed', w.file('B.md'));
     assert.ok(redrawn > 0, 'the editors are not drawn again when the numbering changes');
+    // With nothing selected, the outline command makes the whole note's outline numbers Obsidian's lists, in one change.
+    const whole = editor('1. Intro\n\tWords.\n\n\t1.1. Background\n\t\tMore.', { line: 0, ch: 0 });
+    await open(w, 'B.md', whole);
+    w.app.commands.executeCommandById('design-redux:make-outline-list');
+    await settle(8);
+    assert.strictEqual(whole.text, '1. Intro\n\tWords.\n\n\t1. Background\n\t\tMore.');
+    assert.strictEqual(whole.changes.length, 1);
   });
 
   await check('a property added where the properties stand: a row at the ledger\'s foot, Enter from the name to the value and Enter writes it; a name the note has is said in red; Escape takes it away; with none, the row is the ledger', async () => {

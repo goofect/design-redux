@@ -221,6 +221,21 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       (v) => v.length >= 3
     );
     expect(marked).toEqual(['i. Summary', '2.1. Parliamentary accountability', 'i. Summary']);
+    const code = () => browser.execute(() => document.querySelectorAll('.workspace-leaf.mod-active .cm-hmd-indented-code').length);
+    expect(await code()).toBeGreaterThan(0);
+    // The outline command makes the note's outline numbers Obsidian's lists: nothing under them is code any more, and 2.1. reads as it did.
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:make-outline-list'));
+    expect(await readUntil(code, (n) => n === 0)).toBe(0);
+    const text = await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
+    expect(text).toContain('\t1. [[Parliamentary accountability]]\n');
+    expect(text).toContain('numbering: "1.1"');
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 0, ch: 0 }));
+    const labels = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line .dr-number')).map((n) => n.textContent.trim())),
+      (v) => v.includes('2.1.')
+    );
+    expect(labels).toContain('2.1.');
+    await shot('outline-made-lists');
   });
 
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {

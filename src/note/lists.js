@@ -18,7 +18,7 @@ import { Feature } from '../core/feature.js';
 import { listLines, numberLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
 import { measurer } from './list-markers.js';
-import { NUMBERING, numberingText, numberRendered, parseNumbering, toRealList } from './numbering.js';
+import { NUMBERING, numberingText, numberRendered, outlineToReal, parseNumbering, toRealList } from './numbering.js';
 
 export class MarkedLists extends Feature {
   register() {
@@ -59,21 +59,32 @@ export class MarkedLists extends Feature {
   }
 
   /**
-   * Numbers the note's lists one way: the selected lines, if any, made one
-   * of Obsidian's numbered lists first, then the note's `numbering` set.
+   * Numbers the note's lists one way, then sets the note's `numbering`.
+   * The selected lines are made one of Obsidian's lists first; for an
+   * outline, only the outline numbers written as text among them (2.1.)
+   * are, and with nothing selected, those in the whole note, so a note
+   * written that way becomes Obsidian's lists without its other lines
+   * moving. One change, one Undo.
    */
   async numberAs(ctx, text) {
     const { editor, view, file } = ctx;
-    const from = editor.getCursor('from').line;
-    const to = editor.getCursor('to').line;
-    if (from !== to || editor.getCursor('from').ch !== editor.getCursor('to').ch) {
+    const picked = editor.getCursor('from').line !== editor.getCursor('to').line || editor.getCursor('from').ch !== editor.getCursor('to').ch;
+    const outline = parseNumbering(text).outline;
+    if (picked || outline) {
+      const from = picked ? editor.getCursor('from').line : 0;
+      const to = picked ? editor.getCursor('to').line : editor.lineCount() - 1;
       const lines = [];
       for (let i = from; i <= to; i++) lines.push(editor.getLine(i));
       const config = (k) => (typeof this.app.vault.getConfig === 'function' ? this.app.vault.getConfig(k) : undefined);
       const unit = config('useTab') === false ? ' '.repeat(config('tabSize') || 4) : '\t';
-      editor.replaceRange(toRealList(lines, unit).join('\n'), { line: from, ch: 0 }, { line: to, ch: editor.getLine(to).length });
-      // Saved before the property is written, so the note is not written twice at once.
-      if (view && typeof view.save === 'function') await view.save();
+      const written = outline ? outlineToReal(lines, unit) : lines;
+      const made = outline && (written.some((l, i) => l !== lines[i]) || !picked) ? written : toRealList(lines, unit);
+      const changes = made.map((l, i) => (l === lines[i] ? null : { from: { line: from + i, ch: 0 }, to: { line: from + i, ch: lines[i].length }, text: l })).filter(Boolean);
+      if (changes.length) {
+        editor.transaction({ changes });
+        // Saved before the property is written, so the note is not written twice at once.
+        if (view && typeof view.save === 'function') await view.save();
+      }
     }
     if (file) await this.plugin.notes.write(file, (fm) => (fm[NUMBERING] = text));
   }

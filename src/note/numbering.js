@@ -12,7 +12,7 @@
 /* drawn; the editor and reading view draw the labels.                 */
 /* ------------------------------------------------------------------ */
 
-import { depth, toLetters, toRoman } from './list-markers.js';
+import { depth, followsInOutline, toLetters, toRoman } from './list-markers.js';
 
 /** The property a note says its numbering with. */
 export const NUMBERING = 'numbering';
@@ -88,6 +88,34 @@ export function toRealList(lines, unit = '\t', tab = 4) {
     counts.length = level + 1;
     counts[level] = (counts[level] || 0) + 1;
     return `${unit.repeat(level)}${counts[level]}. ${m[3]}`;
+  });
+}
+
+/**
+ * Outline numbers written as text (2.1., 2.1.1.) made items of Obsidian's
+ * lists, in place: each its own number (1., 2.) at least as deep as its
+ * outline number says, the lines round it left as they are, so what was
+ * under it (its words, its own items) is under a list item again and no
+ * longer code to Markdown. Lines in frontmatter or fenced code are left
+ * be. A number with no stop ("1.1") only where it follows the one above.
+ */
+export function outlineToReal(lines, unit = '\t', tab = 4) {
+  let fenced = false;
+  let front = lines[0] === '---';
+  let before = null;
+  return lines.map((line, i) => {
+    if (front) {
+      if (i > 0 && /^(---|\.\.\.)\s*$/.test(line)) front = false;
+      return line;
+    }
+    if (/^[ \t]*(```|~~~)/.test(line)) fenced = !fenced;
+    const m = !fenced && /^([ \t]*)(\d+(?:\.\d+)+)([.)]?)[ \t]+(.*)$/.exec(line);
+    if (!m || (!m[3] && !(before && followsInOutline(before, m[2])))) return line;
+    before = m[2];
+    const parts = m[2].split('.');
+    const level = Math.max(parts.length - 1, Math.round(depth(m[1]) / tab));
+    const indent = depth(m[1]) >= (parts.length - 1) * tab ? m[1] : unit.repeat(level);
+    return `${indent}${parts[parts.length - 1]}. ${m[4]}`;
   });
 }
 
