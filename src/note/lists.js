@@ -14,7 +14,6 @@
 /* ------------------------------------------------------------------ */
 
 import { editorInfoField, editorLivePreviewField } from 'obsidian';
-import { addActionItems } from '../core/actions.js';
 import { Feature } from '../core/feature.js';
 import { listLines, numberLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
@@ -57,10 +56,6 @@ export class MarkedLists extends Feature {
     });
     this.redrawReading();
     this.add(() => this.redrawReading()); // the feature is off by now: the lists go back to the paragraphs they were
-    // The note's text menu: Number lists, the four ways under it, where Obsidian's own editing entries are.
-    this.listen(this.app.workspace, 'editor-menu', (menu, editor, info) => {
-      if (info && info.file) addActionItems(menu, this.actions(), 'editor', { editor, view: info, file: info.file });
-    });
   }
 
   /**
@@ -118,12 +113,12 @@ export class MarkedLists extends Feature {
   }
 
   actions() {
-    const number = (id, name, menu, styles) => ({ id, name, menu, group: 'Number lists', section: 'action', on: 'editor', run: (ctx) => this.numberAs(ctx, numberingText(parseNumbering(styles))) });
+    const number = (id, name, styles) => ({ id, name, on: 'editor', menu: false, run: (ctx) => this.numberAs(ctx, numberingText(parseNumbering(styles))) });
     return [
-      number('make-outline-list', 'Number this note’s lists as an outline, 1.1. (and make the selected lines a list)', 'As an outline (1., 1.1., 1.1.1.)', '1.1'),
-      number('number-lists-mixed', 'Number this note’s lists 1., a., i. (and make the selected lines a list)', '1., a., i.', '1 a i'),
-      number('make-lettered-list', 'Number this note’s lists a., i. (and make the selected lines a list)', 'a., i.', 'a i'),
-      number('make-roman-numeral-list', 'Number this note’s lists i., a. (and make the selected lines a list)', 'i., a.', 'i a'),
+      number('make-outline-list', 'Number this note’s lists as an outline, 1.1. (and make the selected lines a list)', '1.1'),
+      number('number-lists-mixed', 'Number this note’s lists 1., a., i. (and make the selected lines a list)', '1 a i'),
+      number('make-lettered-list', 'Number this note’s lists a., i. (and make the selected lines a list)', 'a i'),
+      number('make-roman-numeral-list', 'Number this note’s lists i., a. (and make the selected lines a list)', 'i a'),
     ];
   }
 }
