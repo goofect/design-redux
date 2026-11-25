@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* Lettered and roman lists: in the editor                             */
+/* Lettered, roman and outline lists: in the editor                    */
 /*                                                                     */
 /* An item's line hangs, as Obsidian's own list lines do: a long item  */
 /* wraps under its words, not under its marker. Obsidian already hangs */
@@ -38,8 +38,8 @@ export function itemLines(state, from, to, width, tab = 4) {
     const line = doc.line(n);
     const m = LIST_ITEM.exec(line.text);
     if (!m || ignored(state, line.from)) continue;
-    const sibling = m[2].length > 1 && !isMarker(m[2]) ? around(lines, n - 1, depth(m[1])).sibling : null;
-    if (!isMarker(m[2], sibling)) continue;
+    const near = isMarker(m[2], null, m[3]) ? {} : around(lines, n - 1, depth(m[1]));
+    if (!isMarker(m[2], near.sibling, m[3], near.parent)) continue;
     // Indent levels: a tab, or a tab's width of spaces; each is Obsidian's --list-indent wide, or a tab where that is not set.
     const levels = Math.ceil(depth(m[1]) / tab);
     const mark = width(`${m[2]}${m[3]}${m[4]}`);

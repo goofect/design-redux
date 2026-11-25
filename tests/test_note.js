@@ -463,6 +463,66 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     ]);
   });
 
+  await check('outline lists (1.1., 1.2.1.): Enter carries on, Tab nests, an empty item steps out by its number; "1.1" without its stop only where it follows the item above; lines numbered by their indent', async () => {
+    assert.deepStrictEqual([dr.nextMarker('1.1'), dr.nextMarker('2.3.9'), dr.firstUnder('1.1'), dr.makeOutline(['one', '\tsub', '\t\tdeep', '\tmore', 'two', '- three'])],
+      ['1.2', '2.3.10', '1.1.1', ['1. one', '\t1.1. sub', '\t\t1.1.1. deep', '\t1.2. more', '2. two', '3. three']]);
+    assert.deepStrictEqual([['1', '1.1'], ['1.1', '1.2'], ['1.1.2', '1.2'], ['1.1', '1.3'], ['1', '2.1'], ['a', '1.1']].map(([b, m]) => dr.followsInOutline(b, m)), [true, true, true, false, false, false]);
+    assert.deepStrictEqual(dr.makeOutline(['1. one', '\t1.3. sub', '\t1.1. sub', '4. two']), ['1. one', '\t1.1. sub', '\t1.2. sub', '2. two'], 'an outline is numbered again in order');
+    const w = await world({ 'A.md': '' });
+    const lists = feature(w, 'MarkedLists');
+    const ed = editor('1. Intro\n1.1. one', { line: 1, ch: 8 });
+    assert.ok(lists.carryOn(ed));
+    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n1.2. ');
+    assert.ok(lists.indent(ed));
+    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. ');
+    ed.replaceSelection('deep');
+    assert.ok(lists.carryOn(ed));
+    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n\t1.1.2. ');
+    assert.ok(lists.carryOn(ed), 'an empty nested item steps out');
+    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n1.2. ');
+    assert.ok(lists.carryOn(ed), 'an empty item written flat steps out by its number');
+    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n2. ');
+    const flat = editor('1.1. one\n1.1.1. ', { line: 1, ch: 7 });
+    assert.ok(lists.carryOn(flat));
+    assert.strictEqual(flat.text, '1.1. one\n1.2. ');
+    const bare = editor('1. Intro\n1.1 Background', { line: 1, ch: 14 });
+    assert.ok(lists.carryOn(bare), '"1.1" under "1." is an item');
+    assert.strictEqual(bare.text, '1. Intro\n1.1 Background\n1.2 ');
+    assert.ok(!lists.carryOn(editor('3.5 million people', { line: 0, ch: 18 })), 'a number with a point is no item');
+    assert.ok(!lists.carryOn(editor('1. one\n3.5 million', { line: 1, ch: 11 })), 'nor one that does not follow the item above');
+    const out = editor('1. one\n\t1.1 sub', { line: 1, ch: 8 });
+    assert.ok(lists.outdent(out));
+    assert.strictEqual(out.text, '1. one\n2. sub', 'stepping out to a plain number gives it its stop');
+
+    const d = w.doc;
+    const shape = (list) => Array.from(list.children).map((row) => [row.querySelector('.dr-list-marker').textContent, row.querySelector('.dr-list-text').textContent]);
+    const section = (...nodes) => { const el = d.createElement('div'); el.append(...nodes); return el; };
+    const p = d.createElement('p');
+    p.textContent = '1.1. one\n1.2. two\n1.2.1. deep';
+    lists.render(section(p));
+    assert.deepStrictEqual(shape(p.querySelector('.dr-marked-list')), [['1.1.', 'one'], ['1.2.', 'two'], ['1.2.1.', 'deep']]);
+    const li = d.createElement('li');
+    li.append('Intro\n1.1 Background\n1.2 Scope');
+    lists.render(section(li));
+    assert.deepStrictEqual(shape(li.querySelector('.dr-marked-list')), [['1.1', 'Background'], ['1.2', 'Scope']]);
+    const prose = d.createElement('p');
+    prose.textContent = '3.5 million\n4.2 billion';
+    lists.render(section(prose));
+    assert.strictEqual(prose.childNodes.length, 1, 'numbers with points are no list');
+
+    const doc = '1.1. one\n3.5 million';
+    const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
+    const got = [];
+    for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class]);
+    assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item'], [0, 5, 'dr-list-prefix']]);
+
+    const sel = editor('one\n\tsub\ntwo');
+    sel.select({ line: 0, ch: 0 }, { line: 2, ch: 3 });
+    await open(w, 'A.md', sel);
+    w.app.commands.executeCommandById('design-redux:make-outline-list');
+    assert.strictEqual(sel.text, '1. one\n\t1.1. sub\n2. two');
+  });
+
   await check('a property added where the properties stand: a row at the ledger\'s foot, Enter from the name to the value and Enter writes it; a name the note has is said in red; Escape takes it away; with none, the row is the ledger', async () => {
     const w = await world({ 'Logic/A.md': '---\nstatus: draft\n---\n', 'Logic/B.md': '---\ncourse: Logic\n---\n', 'Logic/C.md': 'x' });
     const sheets = obsidian.Modal.open.length;

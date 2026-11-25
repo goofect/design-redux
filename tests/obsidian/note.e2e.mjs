@@ -153,6 +153,52 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(at).toEqual({ cursor: { line: 0, ch: 11 }, inText: true });
   });
 
+  it('makes an outline (1.1., 1.2.) a list: Enter carries it on and Tab nests it in the editor, a line hangs under its words, and reading view shows the markers in a column', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const path = 'Politics/Outline.md';
+      const start = '1. Intro\n1.1. Background\n';
+      const had = app.vault.getAbstractFileByPath(path);
+      // Written afresh, so a second try starts where the first did.
+      const file = had ? (await app.vault.modify(had, start), had) : await app.vault.create(path, start);
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(file, { state: { mode: 'source' } });
+      const editor = app.workspace.activeEditor.editor;
+      editor.focus();
+      editor.setCursor({ line: 1, ch: editor.getLine(1).length });
+    });
+    await browser.keys(['Enter']);
+    await browser.keys('Scope');
+    await browser.keys(['Enter', 'Tab']);
+    await browser.keys('Detail');
+    const text = await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue()), (t) => t.includes('Detail'));
+    expect(text).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
+    const hung = await browser.execute(() => {
+      const line = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line')).find((l) => l.textContent.startsWith('1.2. '));
+      if (!line) return null;
+      const prefix = line.querySelector('.dr-list-prefix');
+      return { item: line.classList.contains('dr-marked-item'), prefix: prefix && prefix.textContent, hang: parseFloat(getComputedStyle(line).paddingLeft) > 0 };
+    });
+    expect(hung).toEqual({ item: true, prefix: '1.2. ', hang: true });
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getMostRecentLeaf();
+      await leaf.setViewState({ type: 'markdown', state: { file: 'Politics/Outline.md', mode: 'preview' } });
+    });
+    const rows = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .markdown-preview-view .dr-marked-list .dr-list-marker')).map((m) => m.textContent)),
+      (v) => v.length >= 3
+    );
+    expect(rows).toEqual(['1.1.', '1.2.', '1.2.1.']);
+    const column = await browser.execute(() => {
+      const top = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view .dr-marked-list');
+      const left = (sel) => Array.from(top.querySelectorAll(sel)).map((t) => Math.round(t.getBoundingClientRect().left));
+      return { top: left(':scope > .dr-list-row > .dr-list-text'), nested: left(':scope > .dr-list-row > .dr-marked-list > .dr-list-row > .dr-list-marker') };
+    });
+    // The top items' words in one column; the nested item's marker starts where they do.
+    expect(new Set(column.top).size).toBe(1);
+    expect(column.nested).toEqual([column.top[0]]);
+    await shot('outline-list');
+  });
+
   it('keeps a folded section the footnotes leave alone folded when they are put in order', async function () {
     // Obsidian unfolds a section whose text changes; the footnotes change only One's and Three's, so Two stays folded.
     const before = '# One\nBody[^2] then[^1].\n\n# Two\nMore text.\n\n# Three\n\n[^1]: a\n[^2]: b\n';

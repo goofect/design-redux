@@ -27,6 +27,7 @@
     "library-check",
     "library-inbox",
     "make-lettered-list",
+    "make-outline-list",
     "make-roman-numeral-list",
     "merge-properties",
     "new-folder-here",

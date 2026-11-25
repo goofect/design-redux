@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* Lettered and roman lists: in reading view                           */
+/* Lettered, roman and outline lists: in reading view                  */
 /*                                                                     */
 /* Markdown reads "a. one" lines as a paragraph, or as more text of    */
 /* the numbered item they sit under. Where a block's lines from some   */
@@ -14,8 +14,11 @@
 
 import { depth, isMarker } from './list-markers.js';
 
-const MARK = /^\s*([a-z]+)([.)])[ \t]+/i;
-const SOURCE_ITEM = /^([ \t]*)([a-z]+)[.)][ \t]/i;
+// A letter or numeral with its stop, or an outline number with its stop or without (lists-markers.js reads which are items).
+const MARK = /^\s*([a-z]+(?=[.)])|\d+(?:\.\d+)+)([.)]?)[ \t]+/i;
+const SOURCE_ITEM = /^([ \t]*)([a-z]+(?=[.)])|\d+(?:\.\d+)+)[.)]?[ \t]/i;
+// An outline number that can open a list with nothing above it: one ending in .1.
+const OPENS = /^\d+(?:\.\d+)*\.1$/;
 
 /**
  * A block's lines as parts, read without touching it: a <br> or a newline
@@ -131,8 +134,9 @@ function nesting(items, levels) {
       level = { depth: levels[i], at: level.last, marker: null };
       stack.push(level);
     }
-    if (!isMarker(items[i].mark.marker, level.marker)) return null;
-    level.marker = items[i].mark.marker;
+    const { marker, stop } = items[i].mark;
+    if (!isMarker(marker, level.marker, stop) && !(level.marker === null && OPENS.test(marker))) return null;
+    level.marker = marker;
     level.last = i;
     under.push(level.at);
   }

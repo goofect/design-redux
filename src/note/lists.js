@@ -1,12 +1,13 @@
 /* ------------------------------------------------------------------ */
-/* Lettered and roman numeral lists                                    */
+/* Lettered, roman numeral and outline lists                           */
 /*                                                                     */
 /* Markdown numbers lists 1., 2., 3. and nothing else, so a list       */
-/* written a., b., c. or i., ii., iii. is plain paragraphs to          */
-/* Obsidian. Two commands turn the selected lines into one or the      */
-/* other; Enter at the end of an item carries on with the next letter  */
-/* or numeral, Tab and Shift-Tab nest it; in the editor a long item    */
-/* hangs under its words, and reading view makes the items a list. The */
+/* written a., b., c., i., ii., iii. or 1.1., 1.2., 1.2.1. is plain    */
+/* paragraphs to Obsidian. Three commands turn the selected lines into */
+/* one of them; Enter at the end of an item carries on with the next   */
+/* marker, Tab and Shift-Tab nest it, and an empty outline item steps  */
+/* out by its number (1.2. to 2.); in the editor a long item hangs     */
+/* under its words, and reading view makes the items a list. The       */
 /* note's text is what was written.                                    */
 /* ------------------------------------------------------------------ */
 
@@ -58,15 +59,16 @@ export class MarkedLists extends Feature {
     const m = LIST_ITEM.exec(line);
     if (!m) return null;
     const near = around(editor, at.line, depth(m[1]));
-    if (!isMarker(m[2], near.sibling)) return null;
-    const kind = readMarker(m[2], near.sibling).kind;
-    return { at, line, m, near };
+    if (!isMarker(m[2], near.sibling, m[3], near.parent)) return null;
+    return { at, line, m, near, kind: readMarker(m[2], near.sibling).kind };
   }
 
   /** Puts `marker` and `indent` in place of the item's, keeping the cursor on the same word. */
   remark(editor, it, indent, marker) {
     const { at, m } = it;
-    const head = `${indent}${marker}${m[3]}${m[4]}`;
+    // A plain number is Markdown's own list only with its stop: "1.1" stepping out to "2" is written "2.".
+    const stop = m[3] || (/^\d+$/.test(marker) ? '.' : '');
+    const head = `${indent}${marker}${stop}${m[4]}`;
     const old = m[1].length + m[2].length + m[3].length + m[4].length;
     editor.replaceRange(head, { line: at.line, ch: 0 }, { line: at.line, ch: old });
     editor.setCursor({ line: at.line, ch: Math.max(head.length, at.ch + head.length - old) });
@@ -80,6 +82,12 @@ export class MarkedLists extends Feature {
     // A lone "a." is a sentence's start more often than a list: carried on only once the list has two items, or the item has words.
     if (!m[5].trim()) {
       if (m[1]) return this.outdent(editor);
+      // An outline written flat steps out by its number: 1.2. to 2., 1.1.2. to 1.2.
+      if (it.kind === 'outline') {
+        const parts = m[2].split('.');
+        this.remark(editor, it, '', nextMarker(parts.slice(0, -1).join('.')));
+        return true;
+      }
       if (!near.sibling) return false;
       editor.replaceRange('', { line: at.line, ch: 0 }, { line: at.line, ch: line.length });
       return true;
@@ -128,7 +136,7 @@ export class MarkedLists extends Feature {
     editor.replaceRange(makeList(lines, kind).join('\n'), { line: from, ch: 0 }, { line: to, ch: editor.getLine(to).length });
   }
 
-  /** Reading view: each paragraph or numbered item whose lines end in lettered or roman items has them made a list. */
+  /** Reading view: each paragraph or numbered item whose lines end in lettered, roman or outline items has them made a list. */
   render(root, ctx) {
     const info = ctx && typeof ctx.getSectionInfo === 'function' ? ctx.getSectionInfo(root) : null;
     const source = info ? info.text.split('\n').slice(info.lineStart, info.lineEnd + 1) : null;
@@ -147,6 +155,7 @@ export class MarkedLists extends Feature {
     return [
       { id: 'make-lettered-list', name: 'Make a lettered list', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'letter') },
       { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'roman') },
+      { id: 'make-outline-list', name: 'Make an outline list (1., 1.1., 1.2.), or number one again', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'outline') },
     ];
   }
 }
