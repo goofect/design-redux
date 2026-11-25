@@ -3,10 +3,12 @@
 /*                                                                     */
 /* Markdown reads "a. one" lines as a paragraph, or as more text of    */
 /* the numbered item they sit under. Where a block's lines from some   */
-/* point on are all items, those lines are rebuilt in place as a list: */
-/* the markers in a column, as written, a long item wrapping under its */
-/* words, a deeper item (by the note's own indent) in a list under the */
-/* one above. What the block held before the first item stays where it */
+/* point on are all items, those lines are rebuilt in place as a list  */
+/* of the kind Obsidian renders its own numbered lists as, an ol of    */
+/* li, so its styles (and a theme's) draw it: each marker as written   */
+/* in the place of the number, a long item wrapping under its words, a */
+/* deeper item (by the note's own indent) in a list under the one      */
+/* above. What the block held before the first item stays where it    */
 /* is; links and the like are moved into the list, never copied. This  */
 /* is the note's rendered text, which Obsidian hands a post-processor  */
 /* to change; nothing of its own interface is touched.                 */
@@ -94,33 +96,33 @@ function depths(items, source) {
   });
 }
 
+/** A list as Obsidian renders its own numbered ones: an ol, its items li. */
 function listEl(doc) {
-  const el = doc.createElement('div');
+  const el = doc.createElement('ol');
   el.className = 'dr-marked-list';
-  el.setAttribute('role', 'list');
   return el;
 }
 
-/** An item's row: its marker, as written, and its words; the parts are moved in, a text slice made a node of its own. */
+/** An item: an li, its marker as written in the place of the number, its words moved in, a text slice made a node of its own. */
 function rowOf(doc, item) {
-  const row = doc.createElement('div');
+  const row = doc.createElement('li');
   row.className = 'dr-list-row';
-  row.setAttribute('role', 'listitem');
-  const marker = row.appendChild(doc.createElement('span'));
-  marker.className = 'dr-list-marker';
-  marker.textContent = `${item.mark.marker}${item.mark.stop}`;
-  const words = doc.createElement('span');
-  words.className = 'dr-list-text';
+  row.dataset.marker = `${item.mark.marker}${item.mark.stop}`;
   item.lines.forEach((line, n) => {
-    if (n) words.appendChild(doc.createElement('br'));
+    if (n) row.appendChild(doc.createElement('br'));
     line.forEach((part, i) => {
-      if (part.to === undefined) return words.appendChild(part.node);
+      if (part.to === undefined) return row.appendChild(part.node);
       const text = textOf(part);
-      words.appendChild(doc.createTextNode(i === 0 && n === 0 ? text.slice(item.mark.length) : text));
+      row.appendChild(doc.createTextNode(i === 0 && n === 0 ? text.slice(item.mark.length) : text));
     });
   });
-  row.appendChild(words);
   return row;
+}
+
+/** Room for a list's widest marker, in figures' widths, a space after it: where it is wider than Obsidian's own indent, the words step in. */
+function roomFor(list) {
+  const widest = Math.max(...Array.from(list.children).map((li) => li.dataset.marker.length));
+  list.style.setProperty('--dr-marker', `${widest + 1}ch`);
 }
 
 /** Which item each sits under (-1 for none), by depth; null when a marker does not follow the one before it in its list. */
@@ -165,6 +167,9 @@ export function rebuildList(block, source) {
     const parent = under[i] < 0 ? top : subs.get(under[i]) || subs.set(under[i], rows[under[i]].appendChild(listEl(doc))).get(under[i]);
     parent.appendChild(row);
   });
+  [top].concat(Array.from(subs.values())).forEach(roomFor);
+  // A list in one of Obsidian's own items is a list in a list, as its own nested lists are.
+  if (block.closest('li')) top.classList.add('dr-marked-sublist');
   // The rest of the items' lines go; a text node the first item starts in keeps what is before it.
   before.slice(from + 1, stop < 0 ? before.length : stop).forEach((n) => n.parentNode === block && n.remove());
   if (cut.node.nodeType === 3 && cut.at > 0) cut.node.data = cut.node.data.slice(0, cut.at);

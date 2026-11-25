@@ -6,15 +6,17 @@
 /* paragraphs to Obsidian. Three commands turn the selected lines into */
 /* one of them; Enter at the end of an item carries on with the next   */
 /* marker, Tab and Shift-Tab nest it, and an empty outline item steps  */
-/* out by its number (1.2. to 2.); in the editor a long item hangs     */
-/* under its words, and reading view makes the items a list. The       */
-/* note's text is what was written.                                    */
+/* out by its number (1.2. to 2.); the items after count on, in the    */
+/* same Undo, as Obsidian numbers its own lists again. They look as    */
+/* Obsidian's own numbered lists do: in the editor its list lines and  */
+/* grey markers, a long item hanging under its words; in reading view  */
+/* an ol of li. The note's text is what was written.                   */
 /* ------------------------------------------------------------------ */
 
 import { Feature } from '../core/feature.js';
 import { listLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
-import { around, depth, firstUnder, isMarker, LIST_ITEM, makeList, measurer, nextMarker, readMarker } from './list-markers.js';
+import { around, depth, firstUnder, isMarker, LIST_ITEM, makeList, measurer, nextMarker, readMarker, renumber } from './list-markers.js';
 
 export class MarkedLists extends Feature {
   register() {
@@ -63,15 +65,31 @@ export class MarkedLists extends Feature {
     return { at, line, m, near, kind: readMarker(m[2], near.sibling).kind };
   }
 
-  /** Puts `marker` and `indent` in place of the item's, keeping the cursor on the same word. */
+  /**
+   * Writes the item's line edits and the list counted on after them in one
+   * change, one Undo, as Obsidian does for its own lists; then the cursor.
+   * `edits` are [{ line, from, to, text }] in the text as it was.
+   */
+  write(editor, edits, cursor) {
+    const seen = new Set();
+    const changes = edits.filter((c) => !seen.has(`${c.line}:${c.from}`) && seen.add(`${c.line}:${c.from}`));
+    editor.transaction({ changes: changes.map((c) => ({ from: { line: c.line, ch: c.from }, to: { line: c.line, ch: c.to }, text: c.text })) });
+    editor.setCursor(cursor);
+  }
+
+  /** Puts `marker` and `indent` in place of the item's, keeping the cursor on the same word; the list after it, and the one it left, count on. */
   remark(editor, it, indent, marker) {
-    const { at, m } = it;
+    const { at, m, line } = it;
     // A plain number is Markdown's own list only with its stop: "1.1" stepping out to "2" is written "2.".
     const stop = m[3] || (/^\d+$/.test(marker) ? '.' : '');
     const head = `${indent}${marker}${stop}${m[4]}`;
     const old = m[1].length + m[2].length + m[3].length + m[4].length;
-    editor.replaceRange(head, { line: at.line, ch: 0 }, { line: at.line, ch: old });
-    editor.setCursor({ line: at.line, ch: Math.max(head.length, at.ch + head.length - old) });
+    const lineOf = (i) => (i === at.line ? head + line.slice(old) : editor.getLine(i));
+    const count = editor.lineCount();
+    // The items it was among count on from the one above it there, where it moved in or out.
+    const left = indent !== m[1] && it.near.siblingAt !== undefined ? renumber(lineOf, count, it.near.siblingAt) : [];
+    this.write(editor, [{ line: at.line, from: 0, to: old, text: head }].concat(renumber(lineOf, count, at.line), left),
+      { line: at.line, ch: Math.max(head.length, at.ch + head.length - old) });
   }
 
   /** At the end of a list item: starts the next (or, on an empty item, steps out or ends the list). Returns whether it did. */
@@ -92,9 +110,11 @@ export class MarkedLists extends Feature {
       editor.replaceRange('', { line: at.line, ch: 0 }, { line: at.line, ch: line.length });
       return true;
     }
-    const next = `\n${m[1]}${nextMarker(m[2], near.sibling)}${m[3]}${m[4]}`;
-    editor.replaceRange(next, at);
-    editor.setCursor({ line: at.line + 1, ch: next.length - 1 });
+    const head = `${m[1]}${nextMarker(m[2], near.sibling)}${m[3]}${m[4]}`;
+    // The items after it count on from the new one: read as if it were in, written in the text as it is.
+    const lineOf = (i) => (i <= at.line ? editor.getLine(i) : i === at.line + 1 ? head : editor.getLine(i - 1));
+    const after = renumber(lineOf, editor.lineCount() + 1, at.line + 1).map((c) => Object.assign(c, { line: c.line - 1 }));
+    this.write(editor, [{ line: at.line, from: line.length, to: line.length, text: `\n${head}` }].concat(after), { line: at.line + 1, ch: head.length });
     return true;
   }
 

@@ -1,11 +1,14 @@
 /* ------------------------------------------------------------------ */
 /* Lettered, roman and outline lists: in the editor                    */
 /*                                                                     */
-/* An item's line hangs, as Obsidian's own list lines do: a long item  */
-/* wraps under its words, not under its marker. Obsidian already hangs */
+/* An item's line is drawn as Obsidian draws a line of its own         */
+/* numbered lists: its list-line classes (spacing, a tab a level wide, */
+/* the fold arrow's place) and its marker's (grey, the live preview's  */
+/* inset). A long item wraps under its words: Obsidian already hangs   */
 /* an indented line by its indent, each level a span --list-indent     */
 /* wide, with a style on the line; the item's style comes after it and */
-/* adds the marker, held in a span as wide as the hang reckons, so the */
+/* adds the inset and the marker, held in a span as wide as the hang   */
+/* reckons (its figures as the font has them, as measured), so the     */
 /* words start just where the wrap does. Code, maths and frontmatter   */
 /* are left be.                                                        */
 /* ------------------------------------------------------------------ */
@@ -15,7 +18,8 @@ import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, ViewPlugin } from '@codemirror/view';
 import { around, depth, isMarker, LIST_ITEM } from './list-markers.js';
 
-const PREFIX = Decoration.mark({ class: 'dr-list-prefix' });
+// The marker as Obsidian marks a number of its own lists: grey, set in by the live preview's inset.
+const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-formatting-list-ol' });
 
 /** Whether a position is in code, maths, a comment or frontmatter, by the names of Obsidian's syntax nodes. */
 function ignored(state, pos) {
@@ -43,9 +47,10 @@ export function itemLines(state, from, to, width, tab = 4) {
     // Indent levels: a tab, or a tab's width of spaces; each is Obsidian's --list-indent wide, or a tab where that is not set.
     const levels = Math.ceil(depth(m[1]) / tab);
     const mark = width(`${m[2]}${m[3]}${m[4]}`);
-    const hang = `calc(${levels} * var(--list-indent, ${width(' '.repeat(tab))}px) + ${mark}px)`;
+    const hang = `calc(${levels} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--list-padding-inline-start, 0px) + ${mark}px)`;
     const style = `--dr-mark: ${mark}px; --dr-hang: ${hang}; padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))`;
-    out.add(line.from, line.from, Decoration.line({ class: 'dr-marked-item', attributes: { style } }));
+    // Obsidian's list line, a level a step in: its spacing, and its fold arrow placed as on its own numbered items.
+    out.add(line.from, line.from, Decoration.line({ class: `dr-marked-item HyperMD-list-line HyperMD-list-line-${levels + 1}`, attributes: { style } }));
     out.add(line.from + m[1].length, line.from + m[1].length + m[2].length + m[3].length + m[4].length, PREFIX);
   }
   return out.finish();

@@ -153,7 +153,7 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(at).toEqual({ cursor: { line: 0, ch: 11 }, inText: true });
   });
 
-  it('makes an outline (1.1., 1.2.) a list: Enter carries it on and Tab nests it in the editor, a line hangs under its words, and reading view shows the markers in a column', async function () {
+  it('draws an outline (1.1., 1.2.) as Obsidian draws its own numbered lists, and numbers it again as Obsidian does: Enter carries on, Tab nests, an item put in counts the rest on in one Undo', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const path = 'Politics/Outline.md';
       const start = '1. Intro\n1.1. Background\n';
@@ -161,41 +161,77 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       // Written afresh, so a second try starts where the first did.
       const file = had ? (await app.vault.modify(had, start), had) : await app.vault.create(path, start);
       const leaf = app.workspace.getLeaf(false);
-      await leaf.openFile(file, { state: { mode: 'source' } });
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
       const editor = app.workspace.activeEditor.editor;
       editor.focus();
       editor.setCursor({ line: 1, ch: editor.getLine(1).length });
     });
+    const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
     await browser.keys(['Enter']);
     await browser.keys('Scope');
     await browser.keys(['Enter', 'Tab']);
     await browser.keys('Detail');
-    const text = await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue()), (t) => t.includes('Detail'));
-    expect(text).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
-    const hung = await browser.execute(() => {
-      const line = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line')).find((l) => l.textContent.startsWith('1.2. '));
-      if (!line) return null;
-      const prefix = line.querySelector('.dr-list-prefix');
-      return { item: line.classList.contains('dr-marked-item'), prefix: prefix && prefix.textContent, hang: parseFloat(getComputedStyle(line).paddingLeft) > 0 };
+    expect(await readUntil(value, (t) => t.includes('Detail'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
+    // An item put in after Background: Scope and its Detail count on, and one Undo takes it all back.
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 1, ch: 15 }));
+    await browser.keys(['Enter']);
+    await browser.keys('New');
+    expect(await readUntil(value, (t) => t.includes('New'))).toBe('1. Intro\n1.1. Background\n1.2. New\n1.3. Scope\n\t1.3.1. Detail\n');
+    // Undone once Obsidian has saved what was typed: an undo while its save is still on the way meets that save coming back.
+    await readUntil(() => browser.executeObsidian(async ({ app }) => (await app.vault.adapter.read('Politics/Outline.md')) === app.workspace.activeEditor.editor.getValue()), (same) => same, 8000);
+    await browser.executeObsidian(({ app }) => {
+      const editor = app.workspace.activeEditor.editor;
+      editor.undo();
+      editor.undo();
     });
-    expect(hung).toEqual({ item: true, prefix: '1.2. ', hang: true });
+    expect(await readUntil(value, (t) => !t.includes('New'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
+    // Beside Obsidian's own "1.": the same grey, the same inset, the same spacing between items.
+    const drawn = await browser.execute(() => {
+      const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line'));
+      const own = lines.find((l) => l.textContent.startsWith('1. Intro'));
+      const ours = lines.find((l) => l.textContent.startsWith('1.1. '));
+      const mark = (l) => l.querySelector('.cm-formatting-list-ol');
+      const box = (l) => l.getBoundingClientRect();
+      return {
+        colour: [getComputedStyle(mark(own)).color, getComputedStyle(mark(ours)).color],
+        spacing: [getComputedStyle(own).paddingTop, getComputedStyle(ours).paddingTop],
+        inset: [Math.round(mark(own).getBoundingClientRect().left - box(own).left), Math.round(mark(ours).getBoundingClientRect().left - box(ours).left)],
+        hang: parseFloat(getComputedStyle(ours).paddingLeft) > 0,
+        // Each of our markers fits the box the hang reckons: its words never run into it.
+        fits: lines.filter((l) => l.classList.contains('dr-marked-item')).map((l) => {
+          const prefix = l.querySelector('.dr-list-prefix');
+          const range = document.createRange();
+          range.selectNodeContents(prefix);
+          const room = prefix.getBoundingClientRect().right - range.getBoundingClientRect().left;
+          return range.getBoundingClientRect().width <= room + 0.5;
+        }),
+      };
+    });
+    expect(drawn.colour[1]).toBe(drawn.colour[0]);
+    expect(drawn.spacing[1]).toBe(drawn.spacing[0]);
+    expect(drawn.inset[1]).toBe(drawn.inset[0]);
+    expect(drawn.hang).toBe(true);
+    expect(drawn.fits).toEqual([true, true, true]);
+    await shot('outline-list-editor');
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.getMostRecentLeaf();
       await leaf.setViewState({ type: 'markdown', state: { file: 'Politics/Outline.md', mode: 'preview' } });
     });
     const rows = await readUntil(
-      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .markdown-preview-view .dr-marked-list .dr-list-marker')).map((m) => m.textContent)),
+      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .markdown-preview-view ol.dr-marked-list > li')).map((li) => li.dataset.marker)),
       (v) => v.length >= 3
     );
     expect(rows).toEqual(['1.1.', '1.2.', '1.2.1.']);
-    const column = await browser.execute(() => {
-      const top = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view .dr-marked-list');
-      const left = (sel) => Array.from(top.querySelectorAll(sel)).map((t) => Math.round(t.getBoundingClientRect().left));
-      return { top: left(':scope > .dr-list-row > .dr-list-text'), nested: left(':scope > .dr-list-row > .dr-marked-list > .dr-list-row > .dr-list-marker') };
+    const read = await browser.execute(() => {
+      const view = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view');
+      const own = view.querySelector('ol:not(.dr-marked-list) > li');
+      const ours = view.querySelector('ol.dr-marked-list > li');
+      const marker = (li) => getComputedStyle(li, '::marker');
+      return { colour: [marker(own).color, marker(ours).color], content: marker(ours).content, spacing: [getComputedStyle(own).paddingTop, getComputedStyle(ours).paddingTop] };
     });
-    // The top items' words in one column; the nested item's marker starts where they do.
-    expect(new Set(column.top).size).toBe(1);
-    expect(column.nested).toEqual([column.top[0]]);
+    expect(read.colour[1]).toBe(read.colour[0]);
+    expect(read.spacing[1]).toBe(read.spacing[0]);
+    expect(read.content).toContain('1.1.');
     await shot('outline-list');
   });
 

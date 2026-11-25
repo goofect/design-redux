@@ -405,8 +405,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const d = w.doc;
     // A list as [marker, words, [its sub-list]].
     const shape = (list) => Array.from(list.children).map((row) => {
+      assert.strictEqual(`${list.tagName}>${row.tagName}`, 'OL>LI', 'not an ol of li, as Obsidian renders its numbered lists');
       const sub = row.querySelector(':scope > .dr-marked-list');
-      const out = [row.querySelector('.dr-list-marker').textContent, row.querySelector('.dr-list-text').textContent];
+      const out = [row.dataset.marker, Array.from(row.childNodes).filter((n) => n !== sub).map((n) => n.textContent).join('')];
       return sub ? out.concat([shape(sub)]) : out;
     });
     const section = (...nodes) => { const el = d.createElement('div'); el.append(...nodes); return el; };
@@ -438,7 +439,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const own = d.createElement('ul');
     li.append(indicator, 'Topic\na. sub\nb. more', own);
     lists.render(section(li));
-    assert.deepStrictEqual(Array.from(li.childNodes).map((n) => n.className || n.nodeName), ['DIV', '#text', 'dr-marked-list', 'UL']);
+    assert.deepStrictEqual(Array.from(li.childNodes).map((n) => n.className || n.nodeName), ['DIV', '#text', 'dr-marked-list dr-marked-sublist', 'UL'], 'a list in an item of Obsidian\'s is not a list in a list');
     assert.strictEqual(li.childNodes[1].data, 'Topic');
     assert.ok(li.firstChild === indicator && li.lastChild === own, "Obsidian's own nodes in the item stay where they were");
 
@@ -455,11 +456,12 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
     const got = [];
     for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class, (it.value.spec.attributes || {}).style]);
+    const prefix = 'dr-list-prefix cm-formatting-list cm-formatting-list-ol';
     assert.deepStrictEqual(got, [
-      [0, 0, 'dr-marked-item', '--dr-mark: 30px; --dr-hang: calc(0 * var(--list-indent, 40px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
-      [0, 3, 'dr-list-prefix', undefined],
-      [7, 7, 'dr-marked-item', '--dr-mark: 30px; --dr-hang: calc(1 * var(--list-indent, 40px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
-      [8, 11, 'dr-list-prefix', undefined],
+      [0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1', '--dr-mark: 30px; --dr-hang: calc(0 * var(--list-indent, 40px) + var(--list-padding-inline-start, 0px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
+      [0, 3, prefix, undefined],
+      [7, 7, 'dr-marked-item HyperMD-list-line HyperMD-list-line-2', '--dr-mark: 30px; --dr-hang: calc(1 * var(--list-indent, 40px) + var(--list-padding-inline-start, 0px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
+      [8, 11, prefix, undefined],
     ]);
   });
 
@@ -494,8 +496,26 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(lists.outdent(out));
     assert.strictEqual(out.text, '1. one\n2. sub', 'stepping out to a plain number gives it its stop');
 
+    // As Obsidian numbers its own lists again: an item coming in or moving, the items after it count on, in the same Undo.
+    const mid = editor('1.1. a\n1.2. b\n1.2.1. c\n\tmore of c\n1.3. d\n3.5 million\n', { line: 0, ch: 6 });
+    assert.ok(lists.carryOn(mid));
+    assert.strictEqual(mid.text, '1.1. a\n1.2. \n1.3. b\n1.3.1. c\n\tmore of c\n1.4. d\n3.5 million\n');
+    assert.strictEqual(mid.changes.length, 1, 'the new item and the numbers after it are not one Undo');
+    assert.deepStrictEqual(mid.getCursor(), { line: 1, ch: 5 });
+    const tab = editor('1.1. a\n1.2. b\n1.3. c', { line: 1, ch: 6 });
+    assert.ok(lists.indent(tab));
+    assert.strictEqual(tab.text, '1.1. a\n\t1.1.1. b\n1.2. c');
+    assert.ok(lists.outdent(tab));
+    assert.strictEqual(tab.text, '1.1. a\n1.2. b\n1.3. c');
+    const letters = editor('a. x\nb. y\nc. z\nMr. Smith', { line: 0, ch: 4 });
+    assert.ok(lists.carryOn(letters));
+    assert.strictEqual(letters.text, 'a. x\nb. \nc. y\nd. z\nMr. Smith');
+    const moved = editor('a. x\nb. y\nc. z', { line: 1, ch: 4 });
+    assert.ok(lists.indent(moved));
+    assert.strictEqual(moved.text, 'a. x\n\ti. y\nb. z', 'the items it left do not count on without it');
+
     const d = w.doc;
-    const shape = (list) => Array.from(list.children).map((row) => [row.querySelector('.dr-list-marker').textContent, row.querySelector('.dr-list-text').textContent]);
+    const shape = (list) => Array.from(list.children).map((row) => [row.dataset.marker, Array.from(row.childNodes).filter((n) => !n.classList || !n.classList.contains('dr-marked-list')).map((n) => n.textContent).join('')]);
     const section = (...nodes) => { const el = d.createElement('div'); el.append(...nodes); return el; };
     const p = d.createElement('p');
     p.textContent = '1.1. one\n1.2. two\n1.2.1. deep';
@@ -514,7 +534,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
     const got = [];
     for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class]);
-    assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item'], [0, 5, 'dr-list-prefix']]);
+    assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1'], [0, 5, 'dr-list-prefix cm-formatting-list cm-formatting-list-ol']]);
 
     const sel = editor('one\n\tsub\ntwo');
     sel.select({ line: 0, ch: 0 }, { line: 2, ch: 3 });

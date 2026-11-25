@@ -162,6 +162,79 @@ export function isMarker(marker, sibling, stop = '.', parent = null) {
   return !!before && fromLetters(marker.toLowerCase()) === before + 1;
 }
 
+// An item as renumbering reads it: a plain number, an outline number or a letter or numeral, and its stop.
+const ENTRY = /^([ \t]*)(\d+(?:\.\d+)*|[a-z]+)([.)]?)[ \t]/i;
+
+function entryOf(line) {
+  const m = ENTRY.exec(line);
+  if (!m) return null;
+  const [, indent, marker, stop] = m;
+  const kind = /^\d+$/.test(marker) ? 'number' : OUTLINE.test(marker) ? 'outline' : 'letter';
+  if (!stop && kind !== 'outline') return null;
+  return { indent, marker, stop, kind, at: indent.length, end: indent.length + marker.length };
+}
+
+/** An outline counted on from line `at`: each item one after the item before it at its level, its number under its parent's. */
+function renumberOutline(lineOf, count, at, first) {
+  const changes = [];
+  let cur = first.marker.split('.').map(Number);
+  let written = first.marker;
+  for (let i = at + 1; i < count; i++) {
+    const line = lineOf(i);
+    if (!line.trim()) break;
+    const e = entryOf(line);
+    // A line with no number is more of the item above where it is indented (words, a lettered list under it), the list's end where it isn't.
+    if (!e || e.kind === 'letter') {
+      if (/^[ \t]/.test(line)) continue;
+      break;
+    }
+    if (e.kind === 'outline' && !e.stop && !followsInOutline(written, e.marker)) break;
+    written = e.marker;
+    const parts = e.marker.split('.').map(Number);
+    const k = parts.length;
+    const next = k <= cur.length ? cur.slice(0, k - 1).concat(cur[k - 1] + 1) : k === cur.length + 1 ? cur.concat(1) : parts;
+    const text = next.join('.');
+    if (text !== e.marker) changes.push({ line: i, from: e.at, to: e.end, text });
+    cur = next;
+  }
+  return changes;
+}
+
+/** Letters or numerals counted on from line `at`, among the items at its indent; those deeper are left as they are. */
+function renumberLetters(lineOf, count, at, first) {
+  const changes = [];
+  const d = depth(first.indent);
+  let prev = first.marker;
+  let before = around({ getLine: lineOf }, at, d).sibling;
+  let written = first.marker;
+  for (let i = at + 1; i < count; i++) {
+    const line = lineOf(i);
+    if (!line.trim()) break;
+    const deep = depth(/^[ \t]*/.exec(line)[0]);
+    if (deep > d) continue;
+    if (deep < d) break;
+    const e = entryOf(line);
+    if (!e || e.kind !== 'letter' || !isMarker(e.marker, written)) break;
+    written = e.marker;
+    const next = nextMarker(prev, before);
+    if (next !== e.marker) changes.push({ line: i, from: e.at, to: e.end, text: next });
+    before = prev;
+    prev = next;
+  }
+  return changes;
+}
+
+/**
+ * The markers after line `at` written again so its list counts on from it,
+ * as Obsidian numbers its own lists again when an item comes in or moves:
+ * [{ line, from, to, text }]. `lineOf(i)` gives a line, `count` how many.
+ */
+export function renumber(lineOf, count, at) {
+  const first = entryOf(lineOf(at));
+  if (!first) return [];
+  return first.kind === 'letter' ? renumberLetters(lineOf, count, at, first) : renumberOutline(lineOf, count, at, first);
+}
+
 /**
  * Widths of text in a font, for a hanging indent: a canvas measures
  * without touching the page; where there is none, an estimate.

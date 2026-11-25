@@ -82,30 +82,39 @@
   display: none;
 }
 
-/* A lettered or roman item's line in the editor hangs by a style its script sets on the line, after
-   Obsidian's own, the only way past it. Its marker, as wide as the hang reckons, so the words start where the wrap does. */
+/* A lettered, roman or outline item's line in the editor is one of Obsidian's list lines (its classes, given by the script),
+   and hangs by a style its script sets on the line, after Obsidian's own, the only way past it. Its marker takes Obsidian's
+   marker class (grey, the live preview's inset), and is as wide as the hang reckons, the inset in it, so the words start where the wrap does. */
 .dr-marked-item {
   --dr-mark: 0px; /* measured by the script, in the line's style */
 }
 
 .dr-list-prefix {
   display: inline-block;
-  width: var(--dr-mark);
+  font-variant-numeric: normal; /* Obsidian's class sets figures one width, which no canvas measures: the figures as measured */
+  box-sizing: border-box;
+  width: calc(var(--dr-mark) + var(--list-padding-inline-start, 0px));
   white-space: pre;
   text-indent: 0;
 }
 
-/* In reading view, the items made a list: markers in a column as written, the words beside them, a deeper list under an item's words. */
+/* In reading view, the items are an ol of li, as Obsidian renders its own numbered lists, so its styles draw them (the marker's grey,
+   the spacing, the indent, the indentation guides): each marker as written in the place of the number. Where a list's widest marker
+   is wider than Obsidian's indent, the words step in by it (--dr-marker, set by the script), so no marker runs past the text's edge. */
 .dr-marked-list {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  column-gap: 0.5em;
+  --dr-marker: 0ch; /* the widest marker's room, set by the script on the list */
 }
 
-.dr-list-row {
-  display: contents;
+.dr-marked-list > li::marker {
+  content: attr(data-marker) " ";
 }
 
-.dr-list-row > .dr-marked-list {
-  grid-column: 2;
+.dr-marked-list > .dr-list-row {
+  margin-inline-start: max(3ch, var(--dr-marker));
+}
+
+/* Under an item, Obsidian's own or one of these, a list steps in by Obsidian's indent for a list in a list. */
+.dr-marked-sublist > .dr-list-row,
+.dr-list-row .dr-marked-list > .dr-list-row {
+  margin-inline-start: max(var(--list-indent), var(--dr-marker));
 }
