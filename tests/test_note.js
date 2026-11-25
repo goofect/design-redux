@@ -530,6 +530,18 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(String(w.plugin.notes.get(w.file('B.md'), 'numbering')), '1.1');
     w.app.metadataCache.trigger('changed', w.file('B.md'));
     assert.ok(redrawn > 0, 'the editors are not drawn again when the numbering changes');
+    // The note's text menu offers it: one entry, Number lists, the four ways under it.
+    const menu = new obsidian.Menu();
+    const inMenu = editor('1. Intro\n\t1.1. Background', { line: 0, ch: 0 });
+    const shown = await open(w, 'B.md', inMenu);
+    w.app.workspace.trigger('editor-menu', menu, inMenu, shown);
+    const entry = menu.items.find((i) => i.title === 'Number lists');
+    assert.ok(entry && entry.submenu, 'no Number lists entry in the note\'s menu');
+    assert.deepStrictEqual(entry.submenu.titles(), ['As an outline (1., 1.1., 1.1.1.)', '1., a., i.', 'a., i.', 'i., a.']);
+    entry.submenu.items[0].click();
+    await settle(8);
+    assert.strictEqual(inMenu.text, '1. Intro\n\t1. Background');
+
     // With nothing selected, the outline command makes the whole note's outline numbers Obsidian's lists, in one change.
     const whole = editor('1. Intro\n\tWords.\n\n\t1.1. Background\n\t\tMore.', { line: 0, ch: 0 });
     await open(w, 'B.md', whole);
