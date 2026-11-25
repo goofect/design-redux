@@ -280,6 +280,11 @@ jobs:
 
       - name: Build main.js and styles.css
         if: steps.changed.outputs.release == 'yes'
+        # The backup's sign-in apps: a secret left unset leaves that service out of the release.
+        env:
+          DR_GOOGLE_CLIENT_ID: ${{ secrets.DR_GOOGLE_CLIENT_ID }}
+          DR_GOOGLE_CLIENT_SECRET: ${{ secrets.DR_GOOGLE_CLIENT_SECRET }}
+          DR_ONEDRIVE_CLIENT_ID: ${{ secrets.DR_ONEDRIVE_CLIENT_ID }}
         run: node build.mjs
 
       - name: Publish the release

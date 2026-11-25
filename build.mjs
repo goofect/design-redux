@@ -14,7 +14,7 @@ import esbuild from 'esbuild';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const src = path.join(root, 'src');
-const LAYERS = [['core'], ['ui'], ['library', 'note', 'maps', 'tools'], ['plugin']];
+const LAYERS = [['core'], ['ui'], ['library', 'note', 'maps', 'tools', 'backup'], ['plugin']];
 const AREAS = LAYERS.flat();
 const LIMIT = 400;
 const fail = (message) => {
@@ -79,7 +79,10 @@ const common = {
   format: 'cjs',
   target: 'es2021',
   platform: 'browser',
-  external: ['obsidian', 'electron', '@codemirror/*', '@lezer/*'],
+  // http: the page on this machine a sign-in comes back to (desktop only, from Obsidian's own Node).
+  external: ['obsidian', 'electron', 'http', '@codemirror/*', '@lezer/*'],
+  // The backup's sign-in apps, from the environment (CI's secrets for a release): an empty id leaves that service out.
+  define: Object.fromEntries(['DR_GOOGLE_CLIENT_ID', 'DR_GOOGLE_CLIENT_SECRET', 'DR_ONEDRIVE_CLIENT_ID'].map((k) => [k, JSON.stringify(process.env[k] || '')])),
   plugins: [icons],
   write: false,
   metafile: true,

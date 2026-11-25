@@ -1,21 +1,25 @@
 /* ------------------------------------------------------------------ */
 /* The settings page: the features' switches                           */
 /*                                                                     */
-/* Five of Obsidian's own toggles and nothing else, drawn as Obsidian  */
-/* draws its own settings: a row each, its name and what it does, the  */
-/* toggle at the end. First the look and whether it reaches Obsidian's */
-/* interface, then, under a heading, the few features that change what */
-/* you see or write to your notes. A feature that only adds commands   */
-/* has no switch: it is in the command palette, always. Built in       */
-/* whatever window the page is opened in.                              */
+/* Five of Obsidian's own toggles, drawn as Obsidian draws its own     */
+/* settings: a row each, its name and what it does, the toggle at the  */
+/* end. First the look and whether it reaches Obsidian's interface,    */
+/* then, under a heading, the few features that change what you see   */
+/* or write to your notes. A feature that only adds commands has no    */
+/* switch: it is in the command palette, always. Last, the backup: a   */
+/* row a service, signed in or out, where signing in is the switch.    */
+/* Built in whatever window the page is opened in.                     */
 /* ------------------------------------------------------------------ */
 
 import { PluginSettingTab, Setting } from 'obsidian';
+import { Backup } from '../backup/backup.js';
 
 export class SettingsTab extends PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
+    // A sign-in ends in the browser: the page, if it is open, shows it.
+    plugin.registerEvent(app.workspace.on('design-redux:backup', () => this.containerEl.isConnected && this.display()));
   }
 
   /** The switches, in the order they are shown: [{ name, desc, on, set(on), heading (a heading over it) }]. */
@@ -44,6 +48,23 @@ export class SettingsTab extends PluginSettingTab {
     this.switches().forEach((sw) => {
       if (sw.heading) new Setting(root).setName(sw.heading).setHeading();
       new Setting(root).setName(sw.name).setDesc(sw.desc).addToggle((t) => t.setValue(sw.on).onChange((v) => sw.set(v)));
+    });
+    // The backup: a row a service the build can sign in to, its state in words, a failure in red, and one button.
+    const backup = this.plugin.feature(Backup);
+    const rows = backup ? backup.rows() : [];
+    if (rows.length) new Setting(root).setName('Backup').setHeading();
+    rows.forEach((row) => {
+      const setting = new Setting(root).setName(row.name).setDesc(row.desc);
+      if (row.error) {
+        const said = setting.descEl.appendChild(root.ownerDocument.createElement('div'));
+        said.className = 'dr-backup-error';
+        said.setAttribute('role', 'alert');
+        said.textContent = `The last backup failed: ${row.error}.`;
+      }
+      setting.addButton((b) => b.setButtonText(row.button).onClick(async () => {
+        await row.run();
+        this.display();
+      }));
     });
   }
 }

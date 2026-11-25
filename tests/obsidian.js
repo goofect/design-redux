@@ -48,6 +48,7 @@ class Vault extends Events {
       exists: async (p) => this.adapter.files.has(p) || this.items.has(p),
       read: async (p) => this.adapter.files.get(p),
       write: async (p, data) => void this.adapter.files.set(p, data),
+      remove: async (p) => void this.adapter.files.delete(p),
     };
     this.configDir = '.obsidian';
     Object.keys(files || {}).forEach((p) => this._add(p, files[p]));
@@ -82,6 +83,7 @@ class Vault extends Events {
   getMarkdownFiles() { return this.getFiles().filter((f) => f.extension === 'md'); }
   getAllFolders() { return this.getAllLoadedFiles().filter((f) => f instanceof TFolder && f.path !== '/'); }
   async read(file) { return this.text.get(file.path); }
+  async readBinary(file) { return new TextEncoder().encode(this.text.get(file.path)).buffer; }
   async cachedRead(file) { return this.text.get(file.path); }
   async create(path, text = '') {
     path = normalizePath(path);
@@ -276,6 +278,13 @@ class App {
     this.workspace = new Workspace(this, doc);
     this.commands = { commands: {}, executeCommandById: (id) => { const c = this.commands.commands[id]; if (!c) return false; if (c.checkCallback) return c.checkCallback(false) !== false; if (c.callback) c.callback(); return true; } };
     this.lastEvent = null;
+    this.appId = 'a1b2c3d4e5f60718';
+    // Obsidian's secret storage (1.11.4) and its per-vault local storage (1.8.7).
+    const secrets = new Map();
+    this.secretStorage = { getSecret: (id) => secrets.get(id) || null, setSecret: (id, v) => void (v ? secrets.set(id, v) : secrets.delete(id)), listSecrets: () => Array.from(secrets.keys()) };
+    const local = new Map();
+    this.loadLocalStorage = (k) => (local.has(k) ? JSON.parse(local.get(k)) : null);
+    this.saveLocalStorage = (k, v) => void (v == null ? local.delete(k) : local.set(k, JSON.stringify(v)));
   }
 }
 
@@ -431,7 +440,7 @@ class DropdownComponent {
 }
 class PluginSettingTab { constructor(app, plugin) { this.app = app; this.plugin = plugin; this.containerEl = app.workspace.doc.createElement('div'); } }
 
-class Notice { constructor(message) { this.message = message; Notice.log.push(String(message && message.textContent != null ? message.textContent : message)); } hide() {} setMessage(m) { this.message = m; } }
+class Notice { constructor(message) { this.message = message; Notice.log.push(String(message && message.textContent != null ? message.textContent : message)); } hide() {} setMessage(m) { this.message = m; Notice.log.push(String(m)); return this; } }
 Notice.log = [];
 
 const registered = {};
@@ -445,12 +454,23 @@ function setIcon(el, id) {
   svg.setAttribute('data-icon', id);
   el.appendChild(svg);
 }
+// requestUrl: answered by whatever a suite puts in requestUrl.handler ({ url, method, headers, body, contentType } → { status, json?, text?, headers? }).
+async function requestUrl(req) {
+  if (typeof req === 'string') req = { url: req };
+  if (!requestUrl.handler) throw new Error('net::ERR_INTERNET_DISCONNECTED');
+  requestUrl.log.push(req);
+  const out = await requestUrl.handler(req);
+  const text = out.text != null ? out.text : out.json !== undefined ? JSON.stringify(out.json) : '';
+  return { status: out.status || 200, headers: out.headers || {}, text, get json() { return JSON.parse(text); }, arrayBuffer: new TextEncoder().encode(text).buffer };
+}
+requestUrl.handler = null;
+requestUrl.log = [];
 const debounce = (fn) => { const run = (...a) => fn(...a); run.cancel = () => {}; run.run = run; return run; };
 
 module.exports = {
   Events, TAbstractFile, TFile, TFolder, Vault, MetadataCache, FileManager, Component, Workspace, WorkspaceLeaf, App,
   View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, AbstractInputSuggest, Menu, MenuItem, Setting, PluginSettingTab, Notice, ToggleComponent, DropdownComponent,
-  addIcon, removeIcon, setIcon, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
+  addIcon, removeIcon, setIcon, requestUrl, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
   Platform: { isMobile: false, isDesktop: true, isDesktopApp: true, isMacOS: true },
   parseYaml: (s) => yaml.load(s), stringifyYaml: (o) => yaml.dump(o, { lineWidth: -1 }),
   Keymap: { isModEvent: (e) => !!(e && (e.metaKey || e.ctrlKey)), isModifier: (e, m) => !!(e && m === 'Mod' && (e.metaKey || e.ctrlKey)) },

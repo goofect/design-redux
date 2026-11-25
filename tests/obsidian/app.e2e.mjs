@@ -11,7 +11,7 @@ suite('Design Redux in Obsidian: the app', function () {
         commands: Object.keys(app.commands.commands).filter((id) => id.startsWith('design-redux:')).length,
       };
     });
-    expect(got.features).toBe(22);
+    expect(got.features).toBe(23);
     expect(got.commands).toBeGreaterThanOrEqual(59);
   });
 
@@ -120,6 +120,34 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(next.startsWith('Politics/')).toBe(true);
     await swipe(-20);
     expect(await readUntil(active, (p) => p === 'Politics/Anarchy.md')).toBe('Politics/Anarchy.md');
+  });
+
+  it('opens the page a sign-in comes back to on this machine, and a refusal in the browser leaves the vault signed out, said in a notice', async function () {
+    const said = await browser.executeObsidian(async ({ plugins }) => {
+      const backup = plugins.designRedux.features.find((f) => f.constructor.name === 'Backup');
+      const service = {
+        id: 'test', name: 'Test Drive', client: { id: 'test-app' }, loopback: 'localhost',
+        auth: { authorize: 'https://example.invalid/auth', token: 'https://example.invalid/token', scope: 'files' },
+      };
+      const open = backup.openUrl;
+      let answered = 0;
+      backup.openUrl = (url) => {
+        const q = new URL(url).searchParams;
+        // The browser, refusing: it comes back with an error and this sign-in's state.
+        fetch(`${q.get('redirect_uri')}?error=access_denied&state=${q.get('state')}`, { mode: 'no-cors' }).then(() => (answered = 1), () => (answered = -1));
+      };
+      try {
+        await backup.signIn(service);
+      } finally {
+        backup.openUrl = open;
+      }
+      for (let i = 0; i < 40 && !answered; i++) await new Promise((r) => setTimeout(r, 50));
+      const notices = Array.from(document.querySelectorAll('.notice')).map((n) => n.textContent);
+      return { answered, notice: notices.find((n) => n.includes('Test Drive')) || notices.join(' | '), signedIn: backup.signedIn(service) };
+    });
+    expect(said.answered).toBe(1);
+    expect(said.notice).toBe('Not signed in to Test Drive: access was refused.');
+    expect(said.signedIn).toBe(false);
   });
 
   it('opens Obsidian\'s graph of a folder from its menu, its search the folder\'s path', async function () {

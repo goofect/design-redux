@@ -2,7 +2,9 @@
 
 An Obsidian plugin that turns the vault into a library: the folders as a tree
 in the left sidebar, a folder's notes as a list in the page, a note head
-(its properties as a ledger) and pages, and property tools.
+(its properties as a ledger) and pages, property tools, and a one-way
+backup of the vault to Google Drive or OneDrive (the only thing that goes
+on the network).
 One look, reduced and raw, a catalogue site's: small capital labels in one
 monospace, black, white and one grey, space instead of lines, and
 Obsidian's chrome hidden. Desktop only.
@@ -78,13 +80,16 @@ something away.
 
 - `src/<area>/name.js` — the source, ES modules, a folder per area. Areas, in
   layers: `core`, then `ui`, then the features by place (`library`, `note`,
-  `maps`, `tools`), then `plugin`. A module imports from its own area and
+  `maps`, `tools`, `backup`), then `plugin`. A module imports from its own area and
   those below it; the features' areas don't import each other. No module is
   over 400 lines. `src/main.js` exports the plugin.
 - `main.js`, `styles.css` — built, not committed: `npm run build`
   (`build.mjs`; the tests build first). esbuild bundles `src/main.js`; the
   glyphs under `assets/icons/` are bundled as the module `dr:icons`; the
-  parts of `styles/` are joined in name order. The build refuses a module
+  parts of `styles/` are joined in name order. The backup's sign-in apps
+  come from the environment at build (`DR_GOOGLE_CLIENT_ID`,
+  `DR_GOOGLE_CLIENT_SECRET`, `DR_ONEDRIVE_CLIENT_ID`; the repo's secrets
+  for a release); a service with no id is left out. The build refuses a module
   over 400 lines, one in no area, one nothing imports, an import up or across
   the layers, and a name exported by two modules.
 - `styles/NN-name.css` — all styles. 00 tokens, 01 the map onto Obsidian's

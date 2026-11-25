@@ -1,0 +1,8 @@
+/* ------------------------------------------------------------------ */
+/* The backup: its one mark, a failure in red under its row in the     */
+/* settings page, with its words                                       */
+/* ------------------------------------------------------------------ */
+
+.dr-backup-error[role="alert"] {
+  color: var(--dr-error);
+}
