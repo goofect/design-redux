@@ -10,7 +10,8 @@
 /*                                                                     */
 /* Markers an older note has written as text, a., i., 1.1., which are  */
 /* paragraphs to Obsidian, are still drawn as lists, so the note reads */
-/* as it did; the commands make them Obsidian's lists.                 */
+/* as it did, and what Markdown takes for code under them as the text  */
+/* it is (outline-text.js); the commands make them Obsidian's lists.   */
 /* ------------------------------------------------------------------ */
 
 import { editorInfoField, editorLivePreviewField } from 'obsidian';
@@ -18,6 +19,7 @@ import { Feature } from '../core/feature.js';
 import { listLines, numberLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
 import { measurer } from './list-markers.js';
+import { codeAsTextField, codeAsTextReading } from './outline-text.js';
 import { NUMBERING, numberingText, numberRendered, outlineToReal, parseNumbering, toRealList } from './numbering.js';
 
 export class MarkedLists extends Feature {
@@ -44,7 +46,11 @@ export class MarkedLists extends Feature {
       const info = editorInfoField ? state.field(editorInfoField, false) : null;
       return this.numberingOf(info && info.file);
     };
-    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure));
+    const pathOf = (state) => {
+      const info = editorInfoField ? state.field(editorInfoField, false) : null;
+      return (info && info.file && info.file.path) || '';
+    };
+    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live));
     // A note's numbering changed: its editors and reading views drawn again.
     this.known = new Map();
     this.listen(this.app.metadataCache, 'changed', (file) => {
@@ -93,6 +99,7 @@ export class MarkedLists extends Feature {
   render(root, ctx) {
     const info = ctx && typeof ctx.getSectionInfo === 'function' ? ctx.getSectionInfo(root) : null;
     const source = info ? info.text.split('\n').slice(info.lineStart, info.lineEnd + 1) : null;
+    codeAsTextReading(this.app, root, ctx);
     Array.from(root.querySelectorAll('p, li')).concat(/^(P|LI)$/.test(root.tagName) ? [root] : []).forEach((block) => rebuildList(block, source));
     const numbering = ctx && ctx.sourcePath ? this.numberingOf(this.app.vault.getFileByPath(ctx.sourcePath)) : null;
     if (numbering) numberRendered(root, numbering);

@@ -467,6 +467,28 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1'], [0, 5, 'dr-list-prefix cm-formatting-list cm-formatting-list-ol']]);
   });
 
+  await check('reading view: a code block Markdown made of lines indented under a list item is rendered as the note\'s text, a run at a time at its indent; fenced code stays code', async () => {
+    const w = await world({ 'A.md': '' });
+    const lists = feature(w, 'MarkedLists');
+    const d = w.doc;
+    const source = '3. [[Responsible government]]\n\t3.1. [[Parliamentary accountability]]\n\t\ti. **Summary**\n\n\t\tii. **Function**\n\t\t*Words*\n\n\t\t3.1.1. [[Parliamentary oversight]]\n\t\t\ti. **Summary**\n\n\t```\n\tfenced\n\t```';
+    const section = d.createElement('div');
+    const li = section.appendChild(d.createElement('ol')).appendChild(d.createElement('li'));
+    li.append('Responsible government');
+    const pre = li.appendChild(d.createElement('pre'));
+    pre.appendChild(d.createElement('code')).textContent = 'ii. **Function**\n*Words*\n\n3.1.1. [[Parliamentary oversight]]\n\ti. **Summary**\n';
+    const fenced = li.appendChild(d.createElement('pre'));
+    fenced.appendChild(d.createElement('code')).textContent = 'fenced\n';
+    const children = [];
+    obsidian.MarkdownRenderer.calls.length = 0;
+    lists.render(section, { sourcePath: 'A.md', getSectionInfo: () => ({ text: source, lineStart: 0, lineEnd: 12 }), addChild: (c) => children.push(c) });
+    assert.deepStrictEqual([li.contains(pre), li.contains(fenced)], [false, true], 'the indented code is still code, or the fenced code is not');
+    const block = li.querySelector('.dr-as-text-block');
+    assert.deepStrictEqual(Array.from(block.children).map((g) => g.style.getPropertyValue('--dr-indent')), ['2', '2'], 'a run is not at its indent in the note');
+    assert.deepStrictEqual(obsidian.MarkdownRenderer.calls.map((c) => c.markdown), ['ii. **Function**\n*Words*', '3.1.1. [[Parliamentary oversight]]\n\ti. **Summary**']);
+    assert.strictEqual(children.length, 1, 'the render is not tied to the section');
+  });
+
   await check('a note\'s numbering: its lists are Obsidian\'s own, its `numbering` says how they read; each label worked out from the numbers Obsidian keeps', async () => {
     const outline = dr.parseNumbering(1.1);
     assert.deepStrictEqual([dr.parseNumbering('1 a i'), dr.parseNumbering(['a', 'i']), outline, dr.parseNumbering('1'), dr.parseNumbering('alpha'), dr.parseNumbering(undefined)],

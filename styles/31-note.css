@@ -141,3 +141,36 @@
 .dr-number {
   font-variant-numeric: normal;
 }
+
+/* What Markdown takes for code under a list, drawn as the note's text (outline-text.js): each run of lines at its indent,
+   in --list-indent steps; in live preview, where the cursor is, the lines as typed without the code's line round them or its face. */
+.dr-as-text {
+  --dr-indent: 0; /* the run's indent in levels, set by the script */
+  padding-inline-start: calc(var(--dr-indent) * var(--list-indent));
+}
+
+/* The runs as the blank lines between them part them: no paragraph's own margin inside a run, one paragraph's space between runs. */
+.dr-as-text > :first-child {
+  margin-block-start: 0;
+}
+
+.dr-as-text > :last-child {
+  margin-block-end: 0;
+}
+
+.dr-as-text + .dr-as-text {
+  margin-block-start: var(--p-spacing);
+}
+
+.dr-as-text .dr-marked-list {
+  margin-block: 0;
+}
+
+.dr-as-text-raw {
+  --code-border-width: 0;
+  --code-background: transparent;
+  --code-normal: inherit;
+  --code-size: inherit;
+  --font-monospace: var(--font-text);
+}
+

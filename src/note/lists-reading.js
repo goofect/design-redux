@@ -75,7 +75,8 @@ export function findList(block) {
     if (mark) items.push({ mark, lines: [line] });
     else items[items.length - 1].lines.push(line); // text straight after an item goes on it
   });
-  if (items.length < 2) return null;
+  // A lone item is a sentence's start more often than a list, but not in lines drawn as text under a list (outline-text.js).
+  if (items.length < 2 && !(block.closest && block.closest('.dr-as-text'))) return null;
   return { first: filled[start], items };
 }
 

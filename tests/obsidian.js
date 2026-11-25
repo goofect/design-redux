@@ -454,6 +454,13 @@ function setIcon(el, id) {
   svg.setAttribute('data-icon', id);
   el.appendChild(svg);
 }
+// Markdown rendered into an element: here a paragraph of the text, each call kept.
+class MarkdownRenderChild extends Component { constructor(el) { super(); this.containerEl = el; } }
+const MarkdownRenderer = {
+  calls: [],
+  render: async (app, markdown, el, sourcePath) => { MarkdownRenderer.calls.push({ markdown, sourcePath }); el.appendChild(el.ownerDocument.createElement('p')).textContent = markdown; },
+};
+
 // The editor's fields Obsidian gives a plugin: the note an editor holds, and whether it is in live preview.
 const { StateField } = require('@codemirror/state');
 const editorInfoField = StateField.define({ create: () => ({ file: null }), update: (v) => v });
@@ -475,7 +482,7 @@ const debounce = (fn) => { const run = (...a) => fn(...a); run.cancel = () => {}
 module.exports = {
   Events, TAbstractFile, TFile, TFolder, Vault, MetadataCache, FileManager, Component, Workspace, WorkspaceLeaf, App,
   View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, AbstractInputSuggest, Menu, MenuItem, Setting, PluginSettingTab, Notice, ToggleComponent, DropdownComponent,
-  addIcon, removeIcon, setIcon, requestUrl, editorInfoField, editorLivePreviewField, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
+  addIcon, removeIcon, setIcon, requestUrl, editorInfoField, editorLivePreviewField, MarkdownRenderer, MarkdownRenderChild, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
   Platform: { isMobile: false, isDesktop: true, isDesktopApp: true, isMacOS: true },
   parseYaml: (s) => yaml.load(s), stringifyYaml: (o) => yaml.dump(o, { lineWidth: -1 }),
   Keymap: { isModEvent: (e) => !!(e && (e.metaKey || e.ctrlKey)), isModifier: (e, m) => !!(e && m === 'Mod' && (e.metaKey || e.ctrlKey)) },

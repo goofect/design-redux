@@ -222,7 +222,6 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     );
     expect(marked).toEqual(['i. Summary', '2.1. Parliamentary accountability', 'i. Summary']);
     const code = () => browser.execute(() => document.querySelectorAll('.workspace-leaf.mod-active .cm-hmd-indented-code').length);
-    expect(await code()).toBeGreaterThan(0);
     // The outline command makes the note's outline numbers Obsidian's lists: nothing under them is code any more, and 2.1. reads as it did.
     await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:make-outline-list'));
     expect(await readUntil(code, (n) => n === 0)).toBe(0);
@@ -236,6 +235,59 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     );
     expect(labels).toContain('2.1.');
     await shot('outline-made-lists');
+  });
+
+  it('draws what Markdown takes for code under a list as the note\'s text: rendered where the cursor is not, as typed without the code\'s look where it is, and in reading view', async function () {
+    const text = 'A. regime\n1. [[Fusion of powers]]\n\ti. **Summary**\n\tThe *fusion of powers* is the core.\n\n3. [[Responsible government]]\n\ti. **Summary**\n\tWords.\n\n\t3.1. [[Parliamentary accountability]]\n\t\ti. **Summary**\n\t\t*Parliamentary accountability* is the doctrine.\n\n\t\tii. **Function**\n\t\t*Parliamentary accountability* connects things.\n\n\t\t3.1.1. [[Parliamentary oversight]]\n\t\t\ti. **Summary**\n\t\t\t*Parliamentary oversight* is the mechanism.\n\n\t\t\tii. **Process**\n\t\t\tIt works in three stages.\n\n\t3.2. [[Confidence convention]]\n\t\ti. **Summary**\n';
+    const path = await browser.executeObsidian(async ({ app }, text) => {
+      const path = `Politics/As text ${Date.now()}.md`;
+      const file = await app.vault.create(path, text);
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
+      app.workspace.activeEditor.editor.setCursor({ line: 0, ch: 0 });
+      return path;
+    }, text);
+    const look = () => browser.execute(() => {
+      const view = document.querySelector('.workspace-leaf.mod-active .markdown-source-view');
+      return {
+        code: view.querySelectorAll('.cm-line .cm-hmd-indented-code').length,
+        blocks: view.querySelectorAll('.dr-as-text-block').length,
+        bold: Array.from(view.querySelectorAll('.dr-as-text-block strong')).map((b) => b.textContent),
+        links: Array.from(view.querySelectorAll('.dr-as-text-block a.internal-link')).map((a) => a.textContent),
+      };
+    });
+    const shown = await readUntil(look, (v) => v.blocks > 0 && v.bold.length > 0);
+    expect(shown.code).toBe(0);
+    expect(shown.bold).toEqual(['Function', 'Summary', 'Process']);
+    expect(shown.links).toEqual(['Parliamentary oversight']);
+    await shot('as-text-editor');
+    // The cursor in them: the lines as typed, in the text's face, with no line round them.
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 13, ch: 4 }));
+    const raw = await readUntil(
+      () => browser.execute(() => {
+        const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line.dr-as-text-raw'));
+        const code = lines.map((l) => l.querySelector('.cm-inline-code')).find(Boolean);
+        const plain = document.querySelector('.workspace-leaf.mod-active .cm-line:not(.dr-as-text-raw)');
+        return { lines: lines.length, border: code ? getComputedStyle(code).borderTopWidth : '', face: code ? [getComputedStyle(code).fontFamily, getComputedStyle(plain).fontFamily] : [] };
+      }),
+      (v) => v.lines > 0
+    );
+    expect(raw.lines).toBeGreaterThan(0);
+    expect(raw.border).toBe('0px');
+    expect(raw.face[0]).toBe(raw.face[1]);
+    await shot('as-text-editing');
+    await browser.executeObsidian(async ({ app }, path) => {
+      await app.workspace.getMostRecentLeaf().setViewState({ type: 'markdown', state: { file: path, mode: 'preview' } });
+    }, path);
+    const read = await readUntil(
+      () => browser.execute(() => {
+        const view = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view');
+        return { code: view.querySelectorAll('li pre').length, bold: Array.from(view.querySelectorAll('.dr-as-text-block strong')).map((b) => b.textContent) };
+      }),
+      (v) => v.bold.length > 0
+    );
+    expect(read.code).toBe(0);
+    expect(read.bold).toContain('Function');
+    await shot('as-text-reading');
   });
 
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {
