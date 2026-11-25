@@ -274,13 +274,24 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
         const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line.dr-as-text-raw'));
         const code = lines.map((l) => l.querySelector('.cm-inline-code')).find(Boolean);
         const plain = document.querySelector('.workspace-leaf.mod-active .cm-line:not(.dr-as-text-raw)');
-        return { lines: lines.length, border: code ? getComputedStyle(code).borderTopWidth : '', face: code ? [getComputedStyle(code).fontFamily, getComputedStyle(plain).fontFamily] : [] };
+        return {
+          lines: lines.map((l) => l.textContent.trim()),
+          rest: document.querySelectorAll('.workspace-leaf.mod-active .dr-as-text-block').length,
+          border: code ? getComputedStyle(code).borderTopWidth : '',
+          face: code ? [getComputedStyle(code).fontFamily, getComputedStyle(plain).fontFamily] : [],
+          size: code ? [getComputedStyle(code).fontSize, getComputedStyle(plain).fontSize] : [],
+          hung: lines.every((l) => parseFloat(getComputedStyle(l).textIndent) < 0),
+        };
       }),
-      (v) => v.lines > 0
+      (v) => v.lines.length > 0
     );
-    expect(raw.lines).toBeGreaterThan(0);
+    // Only the paragraph the cursor is in, as typed: in the text's face and size, no line round it, a long line hung by its indent.
+    expect(raw.lines).toEqual(['ii. **Function**', '*Parliamentary accountability* connects things.']);
+    expect(raw.rest).toBeGreaterThan(0);
     expect(raw.border).toBe('0px');
     expect(raw.face[0]).toBe(raw.face[1]);
+    expect(raw.size[0]).toBe(raw.size[1]);
+    expect(raw.hung).toBe(true);
     await shot('as-text-editing');
     await browser.executeObsidian(async ({ app }, path) => {
       await app.workspace.getMostRecentLeaf().setViewState({ type: 'markdown', state: { file: path, mode: 'preview' } });

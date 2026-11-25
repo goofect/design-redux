@@ -180,8 +180,8 @@
 .dr-as-text-raw {
   --code-border-width: 0;
   --code-background: transparent;
-  --code-normal: inherit;
-  --code-size: inherit;
+  --code-normal: currentColor;
+  --code-size: 1em;
   --font-monospace: var(--font-text);
 }
 
