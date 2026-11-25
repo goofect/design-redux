@@ -209,6 +209,20 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('outline-list');
   });
 
+  it('leaves a marker written as text alone where Markdown makes its line code (indented past its list after a blank line)', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const text = '2. [[Responsible government]]\n\ti. **Summary**\n\tWords.\n\n\t2.1. [[Parliamentary accountability]]\n\t\ti. **Summary**\n\n\t\tii. **Function**\n\t\tMore words.\n';
+      const file = app.vault.getAbstractFileByPath('Politics/Indented.md') || (await app.vault.create('Politics/Indented.md', text));
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
+      app.workspace.activeEditor.editor.setCursor({ line: 0, ch: 0 });
+    });
+    const marked = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line.dr-marked-item')).map((l) => l.textContent.trim())),
+      (v) => v.length >= 3
+    );
+    expect(marked).toEqual(['i. Summary', '2.1. Parliamentary accountability', 'i. Summary']);
+  });
+
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {
     // A note of its own each try, so a second try starts where the first did.
     const path = await browser.executeObsidian(async ({ app }) => {

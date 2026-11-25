@@ -24,10 +24,16 @@ import { labelOf, ORDERED, pathAt } from './numbering.js';
 // The marker as Obsidian marks a number of its own lists: grey, set in by the live preview's inset.
 const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-formatting-list-ol' });
 
-/** Whether a position is in code, maths, a comment or frontmatter, by the names of Obsidian's syntax nodes. */
-function ignored(state, pos) {
-  for (let node = syntaxTree(state).resolveInner(pos, 1); node; node = node.parent) {
-    if (/code|frontmatter|math|comment/i.test(node.name)) return true;
+/**
+ * Whether a line's text is in code, maths, a comment or frontmatter, by
+ * the names of Obsidian's syntax nodes, read where the text starts: a line
+ * indented into a code block (hmd-indented-code) has no node over its indent.
+ */
+function ignored(state, line, indent) {
+  for (const pos of [line.from, line.from + indent]) {
+    for (let node = syntaxTree(state).resolveInner(pos, 1); node; node = node.parent) {
+      if (/code|frontmatter|math|comment/i.test(node.name)) return true;
+    }
   }
   return false;
 }
@@ -44,7 +50,7 @@ export function itemLines(state, from, to, width, tab = 4) {
   for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
     const line = doc.line(n);
     const m = LIST_ITEM.exec(line.text);
-    if (!m || ignored(state, line.from)) continue;
+    if (!m || ignored(state, line, m[1].length)) continue;
     const near = isMarker(m[2], null, m[3]) ? {} : around(lines, n - 1, depth(m[1]));
     if (!isMarker(m[2], near.sibling, m[3], near.parent)) continue;
     // Indent levels: a tab, or a tab's width of spaces; each is Obsidian's --list-indent wide, or a tab where that is not set.
@@ -114,7 +120,7 @@ export function numberedLines(state, from, to, numbering, width, tab = 4) {
   for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
     const line = doc.line(n);
     const m = ORDERED.exec(line.text);
-    if (!m || ignored(state, line.from)) continue;
+    if (!m || ignored(state, line, m[1].length)) continue;
     const label = labelOf(numbering, pathAt(getLine, n - 1), m[3]);
     const typed = `${m[2]}${m[3]}`;
     if (label === typed) continue;
