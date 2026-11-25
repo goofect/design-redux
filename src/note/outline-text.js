@@ -39,12 +39,19 @@ function groupsOf(lines) {
  * as an indent (--dr-indent levels), so no line is code. `levelOf(group,
  * i)` gives a run's level; by default its indent from the margin.
  */
-export function renderAsText(app, root, lines, sourcePath, component, levelOf = (group) => Math.round(lead(group[0]) / 4)) {
+export function renderAsText(app, root, lines, sourcePath, component, levelOf = (group) => Math.round(lead(group[0]) / 4), guides = false) {
   const doc = root.ownerDocument;
   groupsOf(lines).forEach((group, i) => {
     const part = root.appendChild(doc.createElement('div'));
     part.className = 'dr-as-text';
-    part.style.setProperty('--dr-indent', String(Math.max(0, levelOf(group, i))));
+    const level = Math.max(0, levelOf(group, i));
+    part.style.setProperty('--dr-indent', String(level));
+    // In the editor, a guide a level, as Obsidian draws one on each indented line it lays out itself.
+    for (let k = 0; guides && k < level; k++) {
+      const guide = part.appendChild(doc.createElement('span'));
+      guide.className = 'dr-as-text-guide';
+      guide.style.setProperty('--dr-at', String(k));
+    }
     // Lines after the first carry on its paragraph, whatever their indent: Markdown never makes them code.
     MarkdownRenderer.render(app, [group[0].replace(/^[ \t]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
   });
@@ -96,7 +103,8 @@ class AsText extends WidgetType {
     root.className = 'dr-as-text-block markdown-rendered';
     root.drComponent = new Component();
     root.drComponent.load();
-    renderAsText(this.app, root, this.lines, this.path, root.drComponent);
+    const config = (k) => (typeof this.app.vault.getConfig === 'function' ? this.app.vault.getConfig(k) : undefined);
+    renderAsText(this.app, root, this.lines, this.path, root.drComponent, undefined, config('showIndentGuide') !== false);
     root.addEventListener('mousedown', (e) => {
       const link = e.target.closest && e.target.closest('a.internal-link');
       if (link) {

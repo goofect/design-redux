@@ -146,7 +146,18 @@
    in --list-indent steps; in live preview, where the cursor is, the lines as typed without the code's line round them or its face. */
 .dr-as-text {
   --dr-indent: 0; /* the run's indent in levels, set by the script */
+  position: relative;
   padding-inline-start: calc(var(--dr-indent) * var(--list-indent));
+}
+
+/* In the editor, Obsidian's indentation guide at each level, where and as it draws its own on an indented line. */
+.dr-as-text-guide {
+  --dr-at: 0; /* the guide's level, set by the script */
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: calc(var(--dr-at) * var(--list-indent) + var(--indentation-guide-editing-indent));
+  border-inline-end: var(--indentation-guide-width) solid var(--indentation-guide-color);
 }
 
 /* The runs as the blank lines between them part them: no paragraph's own margin inside a run, one paragraph's space between runs. */

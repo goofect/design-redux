@@ -253,12 +253,19 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
         blocks: view.querySelectorAll('.dr-as-text-block').length,
         bold: Array.from(view.querySelectorAll('.dr-as-text-block strong')).map((b) => b.textContent),
         links: Array.from(view.querySelectorAll('.dr-as-text-block a.internal-link')).map((a) => a.textContent),
+        // The guides: where Obsidian draws its own on the line above, in its colour and width.
+        guides: (() => {
+          const own = Array.from(view.querySelectorAll('.cm-line')).find((l) => l.textContent.includes('is the doctrine'));
+          const mark = (el) => { const s = getComputedStyle(el, el.matches('.cm-indent') ? '::before' : null); return [Math.round(el.getBoundingClientRect().left + (el.matches('.cm-indent') ? parseFloat(s.marginLeft) : 0)), s.borderRightColor, s.borderRightWidth]; };
+          return { own: Array.from(own.querySelectorAll('.cm-indent')).map(mark), ours: Array.from(view.querySelectorAll('.dr-as-text-guide')).slice(0, 2).map(mark) };
+        })(),
       };
     });
     const shown = await readUntil(look, (v) => v.blocks > 0 && v.bold.length > 0);
     expect(shown.code).toBe(0);
     expect(shown.bold).toEqual(['Function', 'Summary', 'Process']);
     expect(shown.links).toEqual(['Parliamentary oversight']);
+    expect(shown.guides.ours).toEqual(shown.guides.own);
     await shot('as-text-editor');
     // The cursor in them: the lines as typed, in the text's face, with no line round them.
     await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 13, ch: 4 }));
