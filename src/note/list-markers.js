@@ -115,39 +115,6 @@ export function firstUnder(parent, before) {
   return r.kind === 'roman' && r.upper ? 'A' : 'a';
 }
 
-// A marker a line already has, which a new one replaces.
-const OLD_MARKER = /^([ \t]*)(?:[-*+]|\d+(?:\.\d+)+[.)]?(?=[ \t])|\d+[.)]|[a-z]+[.)])?[ \t]*(.*)$/i;
-
-/**
- * Lines numbered as an outline by their indent: the outermost 1., 2. (a
- * list of Markdown's own), those under it 1.1., 1.2., and so on down.
- * Numbering lines that already are one numbers them again.
- */
-export function makeOutline(lines) {
-  const levels = [];
-  return lines.map((line) => {
-    if (!line.trim()) return line;
-    const m = OLD_MARKER.exec(line);
-    const d = depth(m[1]);
-    while (levels.length && levels[levels.length - 1].depth > d) levels.pop();
-    if (!levels.length || levels[levels.length - 1].depth < d) levels.push({ depth: d, n: 0 });
-    levels[levels.length - 1].n++;
-    return `${m[1]}${levels.map((l) => l.n).join('.')}. ${m[2]}`;
-  });
-}
-
-/** Lines made a list of a kind: any marker they had (a dash, a number, a letter) gives way to the new one. */
-export function makeList(lines, kind) {
-  if (kind === 'outline') return makeOutline(lines);
-  let n = 0;
-  return lines.map((line) => {
-    if (!line.trim()) return line;
-    const m = OLD_MARKER.exec(line);
-    n++;
-    return `${m[1]}${kind === 'roman' ? toRoman(n) : toLetters(n)}. ${m[2]}`;
-  });
-}
-
 /**
  * Whether a word before a full stop is a marker: one letter, a numeral, or
  * the letters after the item above (z, aa). "Mr. Smith" is no item. An

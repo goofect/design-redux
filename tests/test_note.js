@@ -362,7 +362,6 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
   await check('lists: letters and numerals counted, a marker read by the one before it, lines made a list, Enter carries it on', async () => {
     assert.deepStrictEqual([dr.toRoman(14), dr.fromRoman('xiv'), dr.fromRoman('iiii'), dr.toLetters(27), dr.fromLetters('aa')], ['xiv', 14, 0, 'aa', 27]);
     assert.deepStrictEqual([dr.nextMarker('h'), dr.nextMarker('i', 'h'), dr.nextMarker('i'), dr.nextMarker('ii', 'i'), dr.nextMarker('C')], ['i', 'j', 'ii', 'iii', 'D']);
-    assert.deepStrictEqual(dr.makeList(['- one', '2. two', '', '  three'], 'roman'), ['i. one', 'ii. two', '', '  iii. three']);
     const w = await world({ 'A.md': '' });
     const lists = feature(w, 'MarkedLists');
     const ed = editor('a. first\nb. second', { line: 1, ch: 9 });
@@ -396,7 +395,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     sel.select({ line: 0, ch: 0 }, { line: 1, ch: 3 });
     await open(w, 'A.md', sel);
     w.app.commands.executeCommandById('design-redux:make-lettered-list');
-    assert.strictEqual(sel.text, 'a. one\nb. two');
+    await settle();
+    assert.strictEqual(sel.text, '1. one\n2. two', 'the lines are not one of Obsidian\'s lists');
+    assert.strictEqual(w.plugin.notes.get(w.file('A.md'), 'numbering'), 'a i');
   });
 
   await check('lists in reading view: the items made a list in place, nested by the source, links moved not copied, prose left be', async () => {
@@ -466,10 +467,8 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
   });
 
   await check('outline lists (1.1., 1.2.1.): Enter carries on, Tab nests, an empty item steps out by its number; "1.1" without its stop only where it follows the item above; lines numbered by their indent', async () => {
-    assert.deepStrictEqual([dr.nextMarker('1.1'), dr.nextMarker('2.3.9'), dr.firstUnder('1.1'), dr.makeOutline(['one', '\tsub', '\t\tdeep', '\tmore', 'two', '- three'])],
-      ['1.2', '2.3.10', '1.1.1', ['1. one', '\t1.1. sub', '\t\t1.1.1. deep', '\t1.2. more', '2. two', '3. three']]);
+    assert.deepStrictEqual([dr.nextMarker('1.1'), dr.nextMarker('2.3.9'), dr.firstUnder('1.1')], ['1.2', '2.3.10', '1.1.1']);
     assert.deepStrictEqual([['1', '1.1'], ['1.1', '1.2'], ['1.1.2', '1.2'], ['1.1', '1.3'], ['1', '2.1'], ['a', '1.1']].map(([b, m]) => dr.followsInOutline(b, m)), [true, true, true, false, false, false]);
-    assert.deepStrictEqual(dr.makeOutline(['1. one', '\t1.3. sub', '\t1.1. sub', '4. two']), ['1. one', '\t1.1. sub', '\t1.2. sub', '2. two'], 'an outline is numbered again in order');
     const w = await world({ 'A.md': '' });
     const lists = feature(w, 'MarkedLists');
     const ed = editor('1. Intro\n1.1. one', { line: 1, ch: 8 });
@@ -535,12 +534,66 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const got = [];
     for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class]);
     assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1'], [0, 5, 'dr-list-prefix cm-formatting-list cm-formatting-list-ol']]);
+  });
 
+  await check('a note\'s numbering: its lists are Obsidian\'s own, its `numbering` says how they read; each label worked out from the numbers Obsidian keeps', async () => {
+    const outline = dr.parseNumbering(1.1);
+    assert.deepStrictEqual([dr.parseNumbering('1 a i'), dr.parseNumbering(['a', 'i']), outline, dr.parseNumbering('1'), dr.parseNumbering('alpha'), dr.parseNumbering(undefined)],
+      [{ outline: false, styles: ['1', 'a', 'i'] }, { outline: false, styles: ['a', 'i'] }, { outline: true, styles: [] }, null, null, null]);
+    const mixed = dr.parseNumbering('1 a i');
+    assert.deepStrictEqual([[1], [2, 3], [2, 3, 4], [1, 1, 1, 2]].map((p) => dr.labelOf(mixed, p)), ['1.', 'c.', 'iv.', '2.']);
+    assert.deepStrictEqual([dr.labelOf(outline, [1, 2, 1]), dr.labelOf(dr.parseNumbering('A I'), [3, 4], ')')], ['1.2.1.', 'IV)']);
+    // The numbers an item is under, read up the lines: past words that are more of an item, never past a bullet or words at the margin.
+    const lines = ['1. Intro', '\tmore of intro', '\t1. Background', '\t2. Scope', '\t\t1. Detail', '- a bullet', '\t1. under it', 'words', '\t1. under words'];
+    assert.deepStrictEqual([0, 2, 3, 4, 6, 8, 1].map((n) => dr.pathAt((i) => lines[i], n)), [[1], [1, 1], [1, 2], [1, 2, 1], [1], [1], null]);
+    assert.deepStrictEqual(dr.toRealList(['one', '\tsub', '\t\tdeep', '\tmore', 'two', '- three']), ['1. one', '\t1. sub', '\t\t1. deep', '\t2. more', '2. two', '3. three']);
+    assert.deepStrictEqual(dr.toRealList(['1. Intro', '1.1. Background', '1.2.1. Detail', 'a. Other'], '  '), ['1. Intro', '  1. Background', '    1. Detail', '2. Other'], 'an outline written flat is nested by its numbers');
+
+    // In live preview: the label in the number's place, the number as typed where the cursor is; a label no wider than the number left be.
+    const doc = '1. Intro\n\t1. Background\n\t2. Scope';
+    const draw = (cursor) => {
+      const set = dr.numberedLines(EditorState.create({ doc, selection: { anchor: cursor } }), 0, doc.length, outline, (t) => t.length * 10, 4);
+      const got = [];
+      for (let it = set.iter(); it.value; it.next()) got.push(it.value.spec.widget ? [it.from, it.to, it.value.spec.widget.text] : [it.from, 'line', /\+ (\d+)px\)$/.exec(it.value.spec.attributes.style.split(';')[0])[1]]);
+      return got;
+    };
+    // The whole marker, its space too, gives way to the label, so no part of Obsidian's marker is left beside it.
+    assert.deepStrictEqual(draw(0), [[9, 'line', '50'], [10, 13, '1.1. '], [24, 'line', '50'], [25, 28, '1.2. ']]);
+    assert.deepStrictEqual(draw(11), [[9, 'line', '30'], [24, 'line', '50'], [25, 28, '1.2. ']], 'the number is not shown as typed where the cursor is');
+
+    // In reading view: each item of Obsidian's lists labelled, the list given room for its widest label.
+    const w = await world({ 'A.md': '---\nnumbering: 1.1\n---\n1. Intro\n\t1. Background\n', 'B.md': '1. plain\n' });
+    const lists = feature(w, 'MarkedLists');
+    const d = w.doc;
+    const section = d.createElement('div');
+    const top = section.appendChild(d.createElement('ol'));
+    const intro = top.appendChild(d.createElement('li'));
+    intro.append('Intro');
+    const sub = intro.appendChild(d.createElement('ol'));
+    sub.setAttribute('start', '3');
+    ['Background', 'Scope'].forEach((t) => sub.appendChild(d.createElement('li')).append(t));
+    const bullets = intro.appendChild(d.createElement('ul'));
+    bullets.appendChild(d.createElement('li')).append('a bullet');
+    const plain = section.cloneNode(true);
+    lists.render(section, { sourcePath: 'A.md' });
+    assert.deepStrictEqual(Array.from(section.querySelectorAll('li')).map((li) => li.dataset.drNumber || '-'), ['1.', '1.3.', '1.4.', '-']);
+    assert.strictEqual(sub.style.getPropertyValue('--dr-marker'), '5ch');
+    assert.ok(sub.querySelector('li').classList.contains('dr-numbered-in') && !intro.classList.contains('dr-numbered-in'));
+    lists.render(plain, { sourcePath: 'B.md' });
+    assert.ok(!plain.querySelector('[data-dr-number]'), 'a note with no numbering is labelled');
+
+    // The commands: the selected lines made one of Obsidian's lists, the note's numbering set; a change of it draws the editors again.
+    let redrawn = 0;
+    w.app.workspace.updateOptions = () => redrawn++;
     const sel = editor('one\n\tsub\ntwo');
     sel.select({ line: 0, ch: 0 }, { line: 2, ch: 3 });
-    await open(w, 'A.md', sel);
+    await open(w, 'B.md', sel);
     w.app.commands.executeCommandById('design-redux:make-outline-list');
-    assert.strictEqual(sel.text, '1. one\n\t1.1. sub\n2. two');
+    await settle(8);
+    assert.strictEqual(sel.text, '1. one\n\t1. sub\n2. two');
+    assert.strictEqual(String(w.plugin.notes.get(w.file('B.md'), 'numbering')), '1.1');
+    w.app.metadataCache.trigger('changed', w.file('B.md'));
+    assert.ok(redrawn > 0, 'the editors are not drawn again when the numbering changes');
   });
 
   await check('a property added where the properties stand: a row at the ledger\'s foot, Enter from the name to the value and Enter writes it; a name the note has is said in red; Escape takes it away; with none, the row is the ledger', async () => {

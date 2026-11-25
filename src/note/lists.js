@@ -1,22 +1,26 @@
 /* ------------------------------------------------------------------ */
-/* Lettered, roman numeral and outline lists                           */
+/* Numbered lists, two ways                                            */
 /*                                                                     */
-/* Markdown numbers lists 1., 2., 3. and nothing else, so a list       */
-/* written a., b., c., i., ii., iii. or 1.1., 1.2., 1.2.1. is plain    */
-/* paragraphs to Obsidian. Three commands turn the selected lines into */
-/* one of them; Enter at the end of an item carries on with the next   */
-/* marker, Tab and Shift-Tab nest it, and an empty outline item steps  */
-/* out by its number (1.2. to 2.); the items after count on, in the    */
-/* same Undo, as Obsidian numbers its own lists again. They look as    */
-/* Obsidian's own numbered lists do: in the editor its list lines and  */
-/* grey markers, a long item hanging under its words; in reading view  */
-/* an ol of li. The note's text is what was written.                   */
+/* The way that keeps in step with Obsidian: a note's numbered lists   */
+/* are Obsidian's own (1. items, nested by indent), and its `numbering` */
+/* property says how they read, an outline (1.1.) or a style a level   */
+/* (1 a i). Obsidian does everything a list does; the plugin only      */
+/* draws each item's label, in the editor and in reading view          */
+/* (numbering.js). Four commands set it, making the selected lines a   */
+/* list first.                                                         */
+/*                                                                     */
+/* And markers written as text, a., i., 1.1., which are paragraphs to  */
+/* Obsidian: Enter carries them on, Tab and Shift-Tab nest them, the   */
+/* items after count on in the same Undo; they are drawn as Obsidian's */
+/* own numbered lists are. The note's text is what was written.        */
 /* ------------------------------------------------------------------ */
 
+import { editorInfoField, editorLivePreviewField } from 'obsidian';
 import { Feature } from '../core/feature.js';
-import { listLines } from './lists-editor.js';
+import { listLines, numberLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
-import { around, depth, firstUnder, isMarker, LIST_ITEM, makeList, measurer, nextMarker, readMarker, renumber } from './list-markers.js';
+import { around, depth, firstUnder, isMarker, LIST_ITEM, measurer, nextMarker, readMarker, renumber } from './list-markers.js';
+import { NUMBERING, numberingText, numberRendered, parseNumbering, toRealList } from './numbering.js';
 
 export class MarkedLists extends Feature {
   register() {
@@ -32,11 +36,26 @@ export class MarkedLists extends Feature {
   }
 
   enable() {
-    this.useEditor(listLines((view) => {
+    const measure = (view) => {
       const style = view.contentDOM.ownerDocument.defaultView.getComputedStyle(view.contentDOM);
       const size = parseFloat(style.fontSize) || 16;
       return this.measure(view.contentDOM.ownerDocument, [style.fontStyle, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' '), size);
-    }));
+    };
+    const live = (state) => !editorLivePreviewField || state.field(editorLivePreviewField, false) !== false;
+    const numberingOf = (state) => {
+      const info = editorInfoField ? state.field(editorInfoField, false) : null;
+      return this.numberingOf(info && info.file);
+    };
+    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure));
+    // A note's numbering changed: its editors and reading views drawn again.
+    this.known = new Map();
+    this.listen(this.app.metadataCache, 'changed', (file) => {
+      const now = JSON.stringify(this.numberingOf(file));
+      if ((this.known.has(file.path) ? this.known.get(file.path) : 'null') === now) return;
+      this.known.set(file.path, now);
+      if (typeof this.app.workspace.updateOptions === 'function') this.app.workspace.updateOptions();
+      this.redrawReading();
+    });
     this.redrawReading();
     this.add(() => this.redrawReading()); // the feature is off by now: the lists go back to the paragraphs they were
     // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists.
@@ -148,12 +167,24 @@ export class MarkedLists extends Feature {
     return nextMarker(near.sibling, around(editor, near.siblingAt, depth(indent)).sibling);
   }
 
-  convert(editor, kind) {
+  /**
+   * Numbers the note's lists one way: the selected lines, if any, made one
+   * of Obsidian's numbered lists first, then the note's `numbering` set.
+   */
+  async numberAs(ctx, text) {
+    const { editor, view, file } = ctx;
     const from = editor.getCursor('from').line;
     const to = editor.getCursor('to').line;
-    const lines = [];
-    for (let i = from; i <= to; i++) lines.push(editor.getLine(i));
-    editor.replaceRange(makeList(lines, kind).join('\n'), { line: from, ch: 0 }, { line: to, ch: editor.getLine(to).length });
+    if (from !== to || editor.getCursor('from').ch !== editor.getCursor('to').ch) {
+      const lines = [];
+      for (let i = from; i <= to; i++) lines.push(editor.getLine(i));
+      const config = (k) => (typeof this.app.vault.getConfig === 'function' ? this.app.vault.getConfig(k) : undefined);
+      const unit = config('useTab') === false ? ' '.repeat(config('tabSize') || 4) : '\t';
+      editor.replaceRange(toRealList(lines, unit).join('\n'), { line: from, ch: 0 }, { line: to, ch: editor.getLine(to).length });
+      // Saved before the property is written, so the note is not written twice at once.
+      if (view && typeof view.save === 'function') await view.save();
+    }
+    if (file) await this.plugin.notes.write(file, (fm) => (fm[NUMBERING] = text));
   }
 
   /** Reading view: each paragraph or numbered item whose lines end in lettered, roman or outline items has them made a list. */
@@ -161,6 +192,14 @@ export class MarkedLists extends Feature {
     const info = ctx && typeof ctx.getSectionInfo === 'function' ? ctx.getSectionInfo(root) : null;
     const source = info ? info.text.split('\n').slice(info.lineStart, info.lineEnd + 1) : null;
     Array.from(root.querySelectorAll('p, li')).concat(/^(P|LI)$/.test(root.tagName) ? [root] : []).forEach((block) => rebuildList(block, source));
+    const numbering = ctx && ctx.sourcePath ? this.numberingOf(this.app.vault.getFileByPath(ctx.sourcePath)) : null;
+    if (numbering) numberRendered(root, numbering);
+  }
+
+  /** How a note's numbered lists read, by its `numbering` property; null as Obsidian numbers them. */
+  numberingOf(file) {
+    const cache = file ? this.app.metadataCache.getFileCache(file) : null;
+    return parseNumbering(cache && cache.frontmatter ? cache.frontmatter[NUMBERING] : null);
   }
 
   /** Reading views drawn again, so a list is made, or undone, in what is already open. */
@@ -172,10 +211,12 @@ export class MarkedLists extends Feature {
   }
 
   actions() {
+    const number = (id, name, styles) => ({ id, name, on: 'editor', menu: false, run: (ctx) => this.numberAs(ctx, numberingText(parseNumbering(styles))) });
     return [
-      { id: 'make-lettered-list', name: 'Make a lettered list', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'letter') },
-      { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'roman') },
-      { id: 'make-outline-list', name: 'Make an outline list (1., 1.1., 1.2.), or number one again', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'outline') },
+      number('make-lettered-list', 'Number this note’s lists a., i. (and make the selected lines a list)', 'a i'),
+      number('make-roman-numeral-list', 'Number this note’s lists i., a. (and make the selected lines a list)', 'i a'),
+      number('make-outline-list', 'Number this note’s lists as an outline, 1.1. (and make the selected lines a list)', '1.1'),
+      number('number-lists-mixed', 'Number this note’s lists 1., a., i. (and make the selected lines a list)', '1 a i'),
     ];
   }
 }

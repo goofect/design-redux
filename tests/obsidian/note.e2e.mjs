@@ -235,6 +235,75 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('outline-list');
   });
 
+  it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {
+    // A note of its own each try, so a second try starts where the first did.
+    const path = await browser.executeObsidian(async ({ app }) => {
+      const path = `Politics/Numbered ${Date.now()}.md`;
+      const file = await app.vault.create(path, '---\nnumbering: 1.1\n---\n1. Intro\n\t1. Background\n\t2. Scope\n\t\t1. Detail\n2. Method\n');
+      await new Promise((r) => setTimeout(r, 300));
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
+      const editor = app.workspace.activeEditor.editor;
+      editor.focus();
+      editor.setCursor({ line: 7, ch: editor.getLine(7).length });
+      return path;
+    });
+    const labels = () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line .dr-number')).map((n) => n.textContent.trim()));
+    expect(await readUntil(labels, (v) => v.length === 3)).toEqual(['1.1.', '1.2.', '1.2.1.']);
+    // Obsidian's own Enter: it puts the item in and numbers the rest again; the labels follow.
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 4, ch: 14 }));
+    await browser.keys(['Enter']);
+    await browser.keys('New');
+    const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
+    expect(await readUntil(value, (t) => t.includes('New'))).toBe('---\nnumbering: 1.1\n---\n1. Intro\n\t1. Background\n\t2. New\n\t3. Scope\n\t\t1. Detail\n2. Method\n');
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 8, ch: 9 }));
+    expect(await readUntil(labels, (v) => v.length === 4)).toEqual(['1.1.', '1.2.', '1.3.', '1.3.1.']);
+    const drawn = await browser.execute(() => {
+      const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line'));
+      const own = lines.find((l) => l.textContent.startsWith('1. Intro'));
+      const ours = lines.find((l) => l.querySelector('.dr-number'));
+      const label = ours.querySelector('.dr-number');
+      const mark = own.querySelector('.cm-formatting-list-ol');
+      // The words start where the line's hang says: the label is as wide as it was measured.
+      const words = label.getBoundingClientRect().right;
+      return {
+        colour: [getComputedStyle(mark).color, getComputedStyle(label).color],
+        inset: [getComputedStyle(mark).paddingLeft, getComputedStyle(label).paddingLeft],
+        alone: !label.parentElement.matches('.cm-formatting-list-ol') && ours.querySelectorAll('.cm-formatting-list-ol').length === 1,
+        fold: !!own.querySelector('.cm-fold-indicator'),
+        fits: Math.abs(words - (ours.getBoundingClientRect().left + parseFloat(getComputedStyle(ours).paddingLeft))) < 2,
+      };
+    });
+    expect(drawn.colour[1]).toBe(drawn.colour[0]);
+    expect(drawn.inset[1]).toBe(drawn.inset[0]);
+    expect(drawn.alone).toBe(true);
+    expect(drawn.fold).toBe(true);
+    expect(drawn.fits).toBe(true);
+    // The cursor in a number: it shows as typed there, as live preview shows other marks.
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 4, ch: 2 }));
+    expect(await readUntil(labels, (v) => v.length === 3)).toEqual(['1.2.', '1.3.', '1.3.1.']);
+    await shot('numbered-editor');
+    await browser.executeObsidian(async ({ app }, path) => {
+      await app.workspace.getMostRecentLeaf().setViewState({ type: 'markdown', state: { file: path, mode: 'preview' } });
+    }, path);
+    const read = await readUntil(
+      () => browser.execute(() => {
+        const view = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view');
+        const items = Array.from(view.querySelectorAll('li'));
+        return {
+          labels: items.map((li) => li.dataset.drNumber),
+          marker: items[1] ? getComputedStyle(items[1], '::marker').content : '',
+          collapse: !!view.querySelector('li > .list-collapse-indicator'),
+        };
+      }),
+      (v) => v.labels.length === 6
+    );
+    expect(read.labels).toEqual(['1.', '1.1.', '1.2.', '1.3.', '1.3.1.', '2.']);
+    expect(read.marker).toContain('1.1.');
+    expect(read.collapse).toBe(true);
+    await shot('numbered-reading');
+  });
+
   it('keeps a folded section the footnotes leave alone folded when they are put in order', async function () {
     // Obsidian unfolds a section whose text changes; the footnotes change only One's and Three's, so Two stays folded.
     const before = '# One\nBody[^2] then[^1].\n\n# Two\nMore text.\n\n# Three\n\n[^1]: a\n[^2]: b\n';

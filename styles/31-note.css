@@ -118,3 +118,26 @@
 .dr-list-row .dr-marked-list > .dr-list-row {
   margin-inline-start: max(var(--list-indent), var(--dr-marker));
 }
+
+/* A note's numbering (its `numbering` property): Obsidian's own numbered lists, each item's label in the place of its number.
+   In reading view on the item Obsidian rendered, the words stepping in where a list's widest label is wider than the indent;
+   in live preview a label drawn by the script in the number's place, its figures as measured. */
+.dr-numbered-list {
+  --dr-marker: 0ch; /* the widest label's room, set by the script on the list */
+}
+
+.dr-numbered::marker {
+  content: attr(data-dr-number) " ";
+}
+
+.dr-numbered-list > .dr-numbered {
+  margin-inline-start: max(3ch, var(--dr-marker));
+}
+
+.dr-numbered-list > .dr-numbered-in {
+  margin-inline-start: max(var(--list-indent), var(--dr-marker));
+}
+
+.dr-number {
+  font-variant-numeric: normal;
+}

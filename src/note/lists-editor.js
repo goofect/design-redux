@@ -10,13 +10,16 @@
 /* adds the inset and the marker, held in a span as wide as the hang   */
 /* reckons (its figures as the font has them, as measured), so the     */
 /* words start just where the wrap does. Code, maths and frontmatter   */
-/* are left be.                                                        */
+/* are left be. And a note's numbering (numbering.js): the numbered    */
+/* items of Obsidian's own lists drawn with their labels in live       */
+/* preview, the number Obsidian keeps showing where the cursor is.     */
 /* ------------------------------------------------------------------ */
 
 import { syntaxTree } from '@codemirror/language';
 import { RangeSetBuilder } from '@codemirror/state';
-import { Decoration, ViewPlugin } from '@codemirror/view';
+import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view';
 import { around, depth, isMarker, LIST_ITEM } from './list-markers.js';
+import { labelOf, ORDERED, pathAt } from './numbering.js';
 
 // The marker as Obsidian marks a number of its own lists: grey, set in by the live preview's inset.
 const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-formatting-list-ol' });
@@ -70,6 +73,81 @@ export function listLines(measure) {
 
       draw(view) {
         this.decorations = itemLines(view.state, view.viewport.from, view.viewport.to, measure(view), view.state.tabSize || 4);
+      }
+    },
+    { decorations: (v) => v.decorations }
+  );
+}
+
+/** A numbered item's label, drawn in the place of the number Obsidian keeps. */
+class Label extends WidgetType {
+  constructor(text) {
+    super();
+    this.text = text;
+  }
+
+  eq(other) {
+    return other.text === this.text;
+  }
+
+  toDOM(view) {
+    const span = view.dom.ownerDocument.createElement('span');
+    // Obsidian's own marker classes: its grey and its inset, as on the number it stands for.
+    span.className = 'dr-number cm-formatting cm-formatting-list cm-formatting-list-ol';
+    span.textContent = this.text;
+    return span;
+  }
+}
+
+/**
+ * The numbered items of Obsidian's lists between `from` and `to`, each
+ * drawn with its label in the place of its marker (the number, its stop
+ * and the space after), unless the selection is in the marker, when it
+ * shows as typed, as live preview shows other marks. Where the label is
+ * wider than the number, the line hangs by it, after Obsidian's own hang.
+ */
+export function numberedLines(state, from, to, numbering, width, tab = 4) {
+  const out = new RangeSetBuilder();
+  const doc = state.doc;
+  const getLine = (i) => doc.line(i + 1).text;
+  const reveal = (a, b) => state.selection.ranges.some((r) => r.from <= b && r.to >= a);
+  for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
+    const line = doc.line(n);
+    const m = ORDERED.exec(line.text);
+    if (!m || ignored(state, line.from)) continue;
+    const label = labelOf(numbering, pathAt(getLine, n - 1), m[3]);
+    const typed = `${m[2]}${m[3]}`;
+    if (label === typed) continue;
+    const space = /^[ \t]*/.exec(line.text.slice(m[0].length))[0];
+    const start = line.from + m[1].length;
+    const end = start + typed.length + space.length;
+    const shown = reveal(start, end) ? typed : label;
+    const hang = `calc(${Math.ceil(depth(m[1]) / tab)} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--list-padding-inline-start, 0px) + ${width(`${shown} `)}px)`;
+    out.add(line.from, line.from, Decoration.line({ attributes: { style: `padding-inline-start: ${hang}; text-indent: calc(-1 * ${hang})` } }));
+    if (shown === label) out.add(start, end, Decoration.replace({ widget: new Label(`${label}${space || ' '}`) }));
+  }
+  return out.finish();
+}
+
+/**
+ * The editor extension: `numberingOf(state)` says how the note's lists
+ * read (null: as Obsidian numbers them); in live preview only, as source
+ * mode shows the text as it is.
+ */
+export function numberLines(numberingOf, live, measure) {
+  return ViewPlugin.fromClass(
+    class {
+      constructor(view) {
+        this.draw(view);
+      }
+
+      update(u) {
+        if (u.docChanged || u.viewportChanged || u.selectionSet || u.geometryChanged) this.draw(u.view);
+      }
+
+      draw(view) {
+        const numbering = live(view.state) ? numberingOf(view.state) : null;
+        this.decorations = numbering ? numberedLines(view.state, view.viewport.from, view.viewport.to, numbering, measure(view), view.state.tabSize || 4) : Decoration.none;
       }
     },
     { decorations: (v) => v.decorations }
