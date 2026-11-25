@@ -359,40 +359,15 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(p.textContent, 'E = mc2, H2O, the 1st, a^b^');
   });
 
-  await check('lists: letters and numerals counted, a marker read by the one before it, lines made a list, Enter carries it on', async () => {
+  await check('markers written as text: letters and numerals counted, a word with a full stop or a number with a point no marker; the command makes the lines one of Obsidian\'s lists', async () => {
     assert.deepStrictEqual([dr.toRoman(14), dr.fromRoman('xiv'), dr.fromRoman('iiii'), dr.toLetters(27), dr.fromLetters('aa')], ['xiv', 14, 0, 'aa', 27]);
-    assert.deepStrictEqual([dr.nextMarker('h'), dr.nextMarker('i', 'h'), dr.nextMarker('i'), dr.nextMarker('ii', 'i'), dr.nextMarker('C')], ['i', 'j', 'ii', 'iii', 'D']);
+    assert.deepStrictEqual([['a'], ['iv'], ['Mr'], ['ab', 'aa'], ['1.1', null, '.'], ['3.5', null, ''], ['1.1', '1', ''], ['1.1', null, '', '1']].map((a) => dr.isMarker(...a)), [true, true, false, true, true, false, true, true]);
+    assert.deepStrictEqual([['1', '1.1'], ['1.1', '1.2'], ['1.1.2', '1.2'], ['1.1', '1.3'], ['1', '2.1'], ['a', '1.1']].map(([b, m]) => dr.followsInOutline(b, m)), [true, true, true, false, false, false]);
     const w = await world({ 'A.md': '' });
     const lists = feature(w, 'MarkedLists');
-    const ed = editor('a. first\nb. second', { line: 1, ch: 9 });
-    assert.ok(lists.carryOn(ed));
-    assert.strictEqual(ed.text, 'a. first\nb. second\nc. ');
-    assert.ok(lists.carryOn(ed), 'an empty item should end the list');
-    assert.strictEqual(ed.text, 'a. first\nb. second\n');
-    const lone = editor('a. ', { line: 0, ch: 3 });
-    assert.ok(!lists.carryOn(lone));
-    assert.ok(!lists.carryOn(editor('Mr. Smith', { line: 0, ch: 9 })), 'a word with a full stop is no marker');
-    // A) i) and the like: Tab nests a level down, a then i then a; Enter reads the item at its own depth; Shift-Tab steps back out.
-    const nest = editor('A) one\nB) ', { line: 1, ch: 3 });
-    assert.ok(lists.indent(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) ');
-    nest.replaceSelection('sub');
-    assert.ok(lists.carryOn(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\tii) ');
-    assert.ok(lists.indent(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\t\ta) ');
-    assert.ok(lists.carryOn(nest), 'an empty nested item steps out');
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\tii) ');
-    assert.ok(lists.outdent(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\nB) ');
-    const deep = editor('h. eight\n\ti. one', { line: 1, ch: 7 });
-    assert.ok(lists.carryOn(deep), 'i under h is a numeral of its own list');
-    assert.strictEqual(deep.text, 'h. eight\n\ti. one\n\tii. ');
-    const under = editor('1. first\n\ta. sub\n\tb. ', { line: 2, ch: 4 });
-    assert.ok(lists.outdent(under));
-    assert.strictEqual(under.text, '1. first\n\ta. sub\n2. ', 'stepping out of a lettered list carries on the numbers');
-    const sel = editor('one\ntwo');
-    sel.select({ line: 0, ch: 0 }, { line: 1, ch: 3 });
+    assert.ok(!('carryOn' in lists) && !('indent' in lists), 'markers written as text are still carried on by the plugin');
+    const sel = editor('a. one\nb. two');
+    sel.select({ line: 0, ch: 0 }, { line: 1, ch: 6 });
     await open(w, 'A.md', sel);
     w.app.commands.executeCommandById('design-redux:make-lettered-list');
     await settle();
@@ -466,53 +441,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     ]);
   });
 
-  await check('outline lists (1.1., 1.2.1.): Enter carries on, Tab nests, an empty item steps out by its number; "1.1" without its stop only where it follows the item above; lines numbered by their indent', async () => {
-    assert.deepStrictEqual([dr.nextMarker('1.1'), dr.nextMarker('2.3.9'), dr.firstUnder('1.1')], ['1.2', '2.3.10', '1.1.1']);
-    assert.deepStrictEqual([['1', '1.1'], ['1.1', '1.2'], ['1.1.2', '1.2'], ['1.1', '1.3'], ['1', '2.1'], ['a', '1.1']].map(([b, m]) => dr.followsInOutline(b, m)), [true, true, true, false, false, false]);
+  await check('an outline written as text (1.1., 1.2.1.) drawn as a list, "1.1" without its stop only where it follows the item above; prose left be', async () => {
     const w = await world({ 'A.md': '' });
     const lists = feature(w, 'MarkedLists');
-    const ed = editor('1. Intro\n1.1. one', { line: 1, ch: 8 });
-    assert.ok(lists.carryOn(ed));
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n1.2. ');
-    assert.ok(lists.indent(ed));
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. ');
-    ed.replaceSelection('deep');
-    assert.ok(lists.carryOn(ed));
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n\t1.1.2. ');
-    assert.ok(lists.carryOn(ed), 'an empty nested item steps out');
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n1.2. ');
-    assert.ok(lists.carryOn(ed), 'an empty item written flat steps out by its number');
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n2. ');
-    const flat = editor('1.1. one\n1.1.1. ', { line: 1, ch: 7 });
-    assert.ok(lists.carryOn(flat));
-    assert.strictEqual(flat.text, '1.1. one\n1.2. ');
-    const bare = editor('1. Intro\n1.1 Background', { line: 1, ch: 14 });
-    assert.ok(lists.carryOn(bare), '"1.1" under "1." is an item');
-    assert.strictEqual(bare.text, '1. Intro\n1.1 Background\n1.2 ');
-    assert.ok(!lists.carryOn(editor('3.5 million people', { line: 0, ch: 18 })), 'a number with a point is no item');
-    assert.ok(!lists.carryOn(editor('1. one\n3.5 million', { line: 1, ch: 11 })), 'nor one that does not follow the item above');
-    const out = editor('1. one\n\t1.1 sub', { line: 1, ch: 8 });
-    assert.ok(lists.outdent(out));
-    assert.strictEqual(out.text, '1. one\n2. sub', 'stepping out to a plain number gives it its stop');
-
-    // As Obsidian numbers its own lists again: an item coming in or moving, the items after it count on, in the same Undo.
-    const mid = editor('1.1. a\n1.2. b\n1.2.1. c\n\tmore of c\n1.3. d\n3.5 million\n', { line: 0, ch: 6 });
-    assert.ok(lists.carryOn(mid));
-    assert.strictEqual(mid.text, '1.1. a\n1.2. \n1.3. b\n1.3.1. c\n\tmore of c\n1.4. d\n3.5 million\n');
-    assert.strictEqual(mid.changes.length, 1, 'the new item and the numbers after it are not one Undo');
-    assert.deepStrictEqual(mid.getCursor(), { line: 1, ch: 5 });
-    const tab = editor('1.1. a\n1.2. b\n1.3. c', { line: 1, ch: 6 });
-    assert.ok(lists.indent(tab));
-    assert.strictEqual(tab.text, '1.1. a\n\t1.1.1. b\n1.2. c');
-    assert.ok(lists.outdent(tab));
-    assert.strictEqual(tab.text, '1.1. a\n1.2. b\n1.3. c');
-    const letters = editor('a. x\nb. y\nc. z\nMr. Smith', { line: 0, ch: 4 });
-    assert.ok(lists.carryOn(letters));
-    assert.strictEqual(letters.text, 'a. x\nb. \nc. y\nd. z\nMr. Smith');
-    const moved = editor('a. x\nb. y\nc. z', { line: 1, ch: 4 });
-    assert.ok(lists.indent(moved));
-    assert.strictEqual(moved.text, 'a. x\n\ti. y\nb. z', 'the items it left do not count on without it');
-
     const d = w.doc;
     const shape = (list) => Array.from(list.children).map((row) => [row.dataset.marker, Array.from(row.childNodes).filter((n) => !n.classList || !n.classList.contains('dr-marked-list')).map((n) => n.textContent).join('')]);
     const section = (...nodes) => { const el = d.createElement('div'); el.append(...nodes); return el; };
