@@ -256,6 +256,7 @@ class Workspace extends Events {
   getRightLeaf() { return this._leaf('right'); }
   getLeavesOfType(type) { return this.leaves.filter((l) => l.view && l.view.getViewType() === type); }
   iterateAllLeaves(fn) { this.leaves.forEach(fn); }
+  iterateRootLeaves(fn) { this.leaves.filter((l) => l.side === 'main').forEach(fn); }
   detachLeavesOfType(type) { this.getLeavesOfType(type).forEach((l) => l.detach()); }
   async revealLeaf(leaf) { this.revealed = leaf; }
   setActiveLeaf(leaf) { this.activeLeaf = leaf; this.trigger('active-leaf-change', leaf); }

@@ -281,5 +281,23 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-library').length, 0);
   });
 
+  await check('two fingers sideways over a note step to the next note in its folder, once a swipe, and back the other way', async () => {
+    const w = await world(VAULT);
+    const leaf = w.app.workspace.getLeaf();
+    await leaf.openFile(w.file('Logic/Validity.md'));
+    const doc = leaf.view.containerEl.ownerDocument;
+    let t = 1000;
+    const swipe = (dx, n = 8) => { const at = leaf.view.contentEl; for (let i = 0; i < n; i++) { const e = new doc.defaultView.WheelEvent('wheel', { deltaX: dx, deltaY: 0, bubbles: true }); Object.defineProperty(e, 'timeStamp', { value: (t += 16) }); at.dispatchEvent(e); } t += 1000; };
+    swipe(30, 20);
+    await settle();
+    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Week 2.md', 'one swipe went more or less than one note');
+    swipe(-30);
+    await settle();
+    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Validity.md');
+    swipe(5, 4);
+    await settle();
+    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Validity.md', 'a nudge stepped');
+  });
+
   check.done();
 })();

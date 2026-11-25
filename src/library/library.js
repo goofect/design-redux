@@ -10,6 +10,7 @@ import { View } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { neighbours } from './order.js';
+import { NoteSwipe } from './swipe.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
 
 /** Is an element on screen: Obsidian's own isShown() where there is one, else whether it has a box. */
@@ -38,6 +39,8 @@ export class Library extends Feature {
     // library forward again: it is kept the tab the left sidebar shows, from the start and after any layout change.
     this.keepShown();
     this.listen(ws, 'layout-change', () => this.keepShown());
+    // Two fingers sideways over a note step to the next or the one before.
+    new NoteSwipe(this).start();
   }
 
   /** Opens the library if it is gone and, with the look on, brings it to the front of the left sidebar. */

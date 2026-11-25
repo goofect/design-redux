@@ -98,6 +98,30 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(type).toBe('design-redux-browse');
   });
 
+  it('steps to the next note in its folder on two fingers sideways over the editor, and back the other way', async function () {
+    const swipe = (dx) => browser.executeObsidian(async ({ app }, dx) => {
+      const view = app.workspace.getActiveViewOfType(require('obsidian').MarkdownView);
+      const at = view.containerEl.querySelector('.cm-content');
+      for (let i = 0; i < 12; i++) {
+        at.dispatchEvent(new WheelEvent('wheel', { deltaX: dx, deltaY: 0, bubbles: true }));
+        await new Promise((r) => setTimeout(r, 16));
+      }
+      await new Promise((r) => setTimeout(r, 400));
+    }, dx);
+    const active = () => browser.executeObsidian(({ app }) => app.workspace.getActiveFile()?.path);
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(app.vault.getFileByPath('Politics/Anarchy.md'), { state: { mode: 'source' } });
+      app.workspace.setActiveLeaf(leaf, { focus: true });
+    });
+    await swipe(20);
+    const next = await readUntil(active, (p) => p !== 'Politics/Anarchy.md');
+    expect(next).not.toBe('Politics/Anarchy.md');
+    expect(next.startsWith('Politics/')).toBe(true);
+    await swipe(-20);
+    expect(await readUntil(active, (p) => p === 'Politics/Anarchy.md')).toBe('Politics/Anarchy.md');
+  });
+
   it('opens Obsidian\'s graph of a folder from its menu, its search the folder\'s path', async function () {
     const seen = await browser.executeObsidian(async ({ app }) => {
       const folder = app.vault.getAllLoadedFiles().find((f) => f.children && f.path !== '/');
