@@ -30,7 +30,7 @@ export class NotePages extends Feature {
     const ws = this.app.workspace;
     this.useEditor(pagesField);
     const draw = () => this.drawAll();
-    this.listen(ws, ['file-open', 'layout-change', 'design-redux:renamed'], draw);
+    this.redrawOn(ws, ['file-open', 'layout-change', 'design-redux:renamed'], draw);
     // Saved while typing: only that note's views, and drawn again only if its pages are not as they were.
     this.listen(ws, 'design-redux:modified', (file) => noteViews(this.app).filter((view) => view.file === file).forEach((view) => this.draw(view, true)));
     this.add(() => {

@@ -61,7 +61,7 @@ export class GraphRoutes extends Feature {
 
   enable() {
     const apply = () => this.apply();
-    this.listen(this.app.workspace, ['layout-change', 'design-redux:links', 'design-redux:settings'], apply);
+    this.redrawOn(this.app.workspace, ['layout-change', 'design-redux:links', 'design-redux:settings'], apply);
     this.add(() => this.apply(true));
     this.apply();
   }

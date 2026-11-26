@@ -144,6 +144,24 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     w.app.workspace.leaves.pop();
   });
 
+  await check('a feature redraws once for a burst of changes, and not at all once it is off', async () => {
+    const w = await world({});
+    const f = new (class extends dr.Feature {})(w.plugin);
+    let draws = 0;
+    f.on = true;
+    f.redrawOn(w.app.workspace, ['design-redux:vault', 'design-redux:renamed', 'layout-change'], () => draws++);
+    ['design-redux:vault', 'design-redux:renamed', 'layout-change', 'layout-change'].forEach((e) => w.app.workspace.trigger(e));
+    assert.strictEqual(draws, 0, 'a redraw ran in the middle of the burst');
+    await settle();
+    assert.strictEqual(draws, 1);
+    w.app.workspace.trigger('layout-change');
+    f.off();
+    await settle();
+    w.app.workspace.trigger('layout-change');
+    await settle();
+    assert.strictEqual(draws, 1, 'a feature turned off drew');
+  });
+
   await check('the look: classes on every window, changed with the settings, gone when the plugin unloads', async () => {
     const w = await world({});
     const body = w.doc.body;

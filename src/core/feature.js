@@ -61,6 +61,23 @@ export class Feature {
     return ref;
   }
 
+  /**
+   * Redraws with `fn` after any of these events, once however many come in the same turn:
+   * a rename (a vault change, a rename, a layout change) draws once, not three times.
+   */
+  redrawOn(source, names, fn) {
+    let queued = false;
+    const run = () => {
+      queued = false;
+      if (this.on) fn();
+    };
+    this.listen(source, names, () => {
+      if (queued) return;
+      queued = true;
+      queueMicrotask(run);
+    });
+  }
+
   /** Listens on an element for as long as the feature is on. */
   listenDom(target, type, fn, options) {
     target.addEventListener(type, fn, options);
