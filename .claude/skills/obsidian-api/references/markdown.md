@@ -69,7 +69,8 @@ First decide where the number lives.
 **A. In the structure (recommended unless the text must carry it).** Write
 a standard nested list (`1.` at every level, indented) and change only how
 it looks. This is recipe 24:
-- in the reading view and PDF export, CSS counters on `ol > li::marker`;
+- in the reading view and PDF export, `counters(list-item, ".")` on
+  `ol ol > li::marker` (it honours `<ol start>`);
 - in the editor, a `ViewPlugin` that replaces each nested marker with a
   widget showing `3.1.1.`.
 

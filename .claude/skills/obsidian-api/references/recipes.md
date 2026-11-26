@@ -637,10 +637,13 @@ The reading view and PDF export use CSS counters on Obsidian's native
 markers:
 
 ```css
-.markdown-rendered ol { counter-reset: my-outline; }
-.markdown-rendered ol > li { counter-increment: my-outline; }
-.markdown-rendered ol ol > li::marker { content: counters(my-outline, ".") ". "; }
+.markdown-rendered ol ol > li::marker { content: counters(list-item, ".") ". "; }
 ```
+
+`list-item` is the counter the browser already keeps for every list, so it
+honours `<ol start>`: a list that starts at `3.` reads `3.1.`, `3.1.1.`.
+Selecting and copying gives none of these numbers (markers aren't text), so
+the plugin has to put them on the clipboard itself.
 
 The editor can't use counters: only visible lines are in the DOM. Count
 from the document instead, and show the source while the cursor is on the
@@ -712,9 +715,6 @@ this.registerEditorExtension(outlineNumbers);
 `outlineNumber` walks back from the line to its parents. That is cheap for
 the few dozen visible lines, but not for a whole long document per keystroke.
 
-Two gaps in this recipe:
-- The counters ignore `<ol start>`, so a list that starts at another number
-  loses it.
-- An ordered list under a bullet starts again in the editor but continues
-  its ordered ancestor's count in CSS. Keep outlines unmixed, or reset the
-  counter at `ul > li > ol`.
+One gap: `list-item` counts bullets too, so an ordered list under a bullet
+reads `2.1.` in CSS but starts again in the editor. Keep outlines unmixed,
+or give `ul > li > ol > li::marker` its own rule.
