@@ -109,14 +109,6 @@ export function nextMarker(marker, before) {
   return r.upper ? next.toUpperCase() : next;
 }
 
-/** The first marker of a list under an item: a, then i, then a again; under "I" a capital "A"; under 1.1, 1.1.1. */
-export function firstUnder(parent, before) {
-  const r = parent ? readMarker(parent, before) : { kind: 'number' };
-  if (r.kind === 'outline') return `${parent}.1`;
-  if (r.kind === 'letter') return 'i';
-  return r.kind === 'roman' && r.upper ? 'A' : 'a';
-}
-
 /**
  * Whether a word before a full stop is a marker: one letter, a numeral, or
  * the letters after the item above (z, aa). "Mr. Smith" is no item. An
@@ -210,57 +202,6 @@ function renumberLetters(lineOf, count, at, first) {
     prev = next;
   }
   return changes;
-}
-
-/**
- * Where the lists around line `n` start, to count them on from there after
- * a change: the outline's first item (a plain number at the margin, or the
- * first outline number above), and the first letter or numeral beside the
- * one at `n`. Read upward through the list, blank lines within it
- * included, at most `reach` lines. Line numbers from 0; none, an empty list.
- */
-export function listStarts(lineOf, count, n, reach = 400) {
-  const lead = (line) => depth(/^[ \t]*/.exec(line)[0]);
-  const up = function* () {
-    for (let i = Math.min(n, count - 1); i >= 0 && n - i <= reach; i--) {
-      const line = lineOf(i);
-      if (!line.trim()) {
-        if (blankWithin(lineOf, count, i)) continue;
-        return;
-      }
-      yield i;
-    }
-  };
-  const starts = [];
-  // The outline: up to a number at the margin, or the last outline number before words at the margin.
-  let outline = -1;
-  for (const i of up()) {
-    const e = entryOf(lineOf(i));
-    const d = lead(lineOf(i));
-    if (e && e.kind !== 'letter') {
-      outline = i;
-      if (!d) break;
-    } else if (!d) break;
-  }
-  if (outline >= 0) starts.push(outline);
-  // The letters: the first item at the depth of the nearest letter at or above `n`.
-  let deep = -1;
-  let letter = -1;
-  for (const i of up()) {
-    const line = lineOf(i);
-    const e = entryOf(line);
-    const d = lead(line);
-    if (deep < 0) {
-      if (!e) continue;
-      if (e.kind !== 'letter') break;
-      deep = d;
-    }
-    if (d > deep) continue;
-    if (d < deep || !e || e.kind !== 'letter') break;
-    letter = i;
-  }
-  if (letter >= 0) starts.push(letter);
-  return starts;
 }
 
 /**

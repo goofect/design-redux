@@ -10,27 +10,24 @@
 /* list first.                                                         */
 /*                                                                     */
 /* And markers written as text, a., i., 1.1., which are paragraphs to  */
-/* Obsidian: typing in them works as in Obsidian's own lists           */
-/* (list-editing.js); they are drawn as Obsidian's own numbered lists  */
-/* are, and what Markdown takes for code under them as the text it is  */
-/* (outline-text.js). The note's text is as written.                   */
+/* Obsidian: drawn as Obsidian's own numbered lists are, and what      */
+/* Markdown takes for code under them as the text it is                */
+/* (outline-text.js). Typing in them is Obsidian's, as in any text;    */
+/* two commands move an item with what is under it (list-editing.js).  */
 /* ------------------------------------------------------------------ */
 
-import { Prec } from '@codemirror/state';
-import { keymap } from '@codemirror/view';
 import { editorInfoField, editorLivePreviewField } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { listLines, numberLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
-import { countOn, ListEditing } from './list-editing.js';
+import { ListEditing } from './list-editing.js';
 import { measurer } from './list-markers.js';
 import { codeAsTextField, codeAsTextReading } from './outline-text.js';
 import { NUMBERING, numberingText, numberRendered, outlineToReal, parseNumbering, toRealList } from './numbering.js';
 
 export class MarkedLists extends Feature {
   register() {
-    const config = (k) => (typeof this.app.vault.getConfig === 'function' ? this.app.vault.getConfig(k) : undefined);
-    this.editing = new ListEditing(() => (config('useTab') === false ? ' '.repeat(config('tabSize') || 4) : '\t'));
+    this.editing = new ListEditing();
     this.fonts = new Map(); // a measurer by font
     this.registerEditor();
     this.plugin.registerMarkdownPostProcessor((el, ctx) => this.on && this.render(el, ctx));
@@ -57,20 +54,7 @@ export class MarkedLists extends Feature {
       const info = editorInfoField ? state.field(editorInfoField, false) : null;
       return (info && info.file && info.file.path) || '';
     };
-    // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists. In the editor's own
-    // keymap, before Obsidian's (its own Tab on a selection runs above high precedence): each says false on a line that is no
-    // item of these, so Obsidian's keys run there.
-    const on = (step) => (view) => {
-      const info = editorInfoField ? view.state.field(editorInfoField, false) : null;
-      return !!(info && info.editor) && step(info.editor);
-    };
-    const keys = Prec.highest(keymap.of([
-      { key: 'Enter', run: on((editor) => this.editing.carryOn(editor)) },
-      { key: 'Tab', run: on((editor) => this.editing.indent(editor)) },
-      { key: 'Shift-Tab', run: on((editor) => this.editing.outdent(editor)) },
-      { key: 'Backspace', run: on((editor) => this.editing.unmark(editor)) },
-    ]));
-    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live), keys, countOn(() => this.editing.writing));
+    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live));
     // A note's numbering changed: its editors and reading views drawn again.
     this.known = new Map();
     this.listen(this.app.metadataCache, 'changed', (file) => {
@@ -82,19 +66,6 @@ export class MarkedLists extends Feature {
     });
     this.redrawReading();
     this.add(() => this.redrawReading()); // the feature is off by now: the lists go back to the paragraphs they were
-  }
-
-  /** The steps of typing in a list written as text (list-editing.js), for the keys and the commands. */
-  carryOn(editor) {
-    return this.editing.carryOn(editor);
-  }
-
-  indent(editor) {
-    return this.editing.indent(editor);
-  }
-
-  outdent(editor) {
-    return this.editing.outdent(editor);
   }
 
   /**

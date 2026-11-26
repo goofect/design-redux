@@ -153,10 +153,10 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(at).toEqual({ cursor: { line: 0, ch: 11 }, inText: true });
   });
 
-  it('draws an outline (1.1., 1.2.) as Obsidian draws its own numbered lists, and numbers it again as Obsidian does: Enter carries on, Tab nests, an item put in counts the rest on in one Undo', async function () {
+  it('draws an outline (1.1., 1.2.) as Obsidian draws its own numbered lists, and leaves typing in it to Obsidian: Enter after an item is a new line, no marker', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const path = 'Politics/Outline.md';
-      const start = '1. Intro\n1.1. Background\n';
+      const start = '1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n';
       const had = app.vault.getAbstractFileByPath(path);
       // Written afresh, so a second try starts where the first did.
       const file = had ? (await app.vault.modify(had, start), had) : await app.vault.create(path, start);
@@ -168,27 +168,8 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     });
     const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
     await browser.keys(['Enter']);
-    await browser.keys('Scope');
-    // Tab: the new item a level in, as typed, with no marker of its own.
-    await browser.keys(['Enter', 'Tab']);
-    expect(await readUntil(value, (t) => t.includes('\t1.3. '))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.3. \n');
-    // Its number typed as wanted.
-    await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.replaceRange('\t1.2.1. ', { line: 3, ch: 0 }, { line: 3, ch: e.getLine(3).length }); e.setCursor({ line: 3, ch: 8 }); });
-    await browser.keys('Detail');
-    expect(await readUntil(value, (t) => t.includes('Detail'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
-    // An item put in after Background: Scope and its Detail count on, and one Undo takes it all back.
-    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 1, ch: 15 }));
-    await browser.keys(['Enter']);
     await browser.keys('New');
-    expect(await readUntil(value, (t) => t.includes('New'))).toBe('1. Intro\n1.1. Background\n1.2. New\n1.3. Scope\n\t1.3.1. Detail\n');
-    // Undone once Obsidian has saved what was typed: an undo while its save is still on the way meets that save coming back.
-    await readUntil(() => browser.executeObsidian(async ({ app }) => (await app.vault.adapter.read('Politics/Outline.md')) === app.workspace.activeEditor.editor.getValue()), (same) => same, 8000);
-    await browser.executeObsidian(({ app }) => {
-      const editor = app.workspace.activeEditor.editor;
-      editor.undo();
-      editor.undo();
-    });
-    expect(await readUntil(value, (t) => !t.includes('New'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
+    expect(await readUntil(value, (t) => t.includes('New'))).toBe('1. Intro\n1.1. Background\nNew\n1.2. Scope\n\t1.2.1. Detail\n');
     // Beside Obsidian's own "1.": the same grey, the same inset, the same spacing between items.
     const drawn = await browser.execute(() => {
       const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line'));
@@ -323,7 +304,7 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(raw.size[0]).toBe(raw.size[1]);
     expect(raw.hung).toBe(true);
     await shot('as-text-editing');
-    // Typing in it as in any list: Enter at the end of 3.1.1. starts 3.1.2.
+    // Typing in it is Obsidian's: Enter at the end of 3.1.1. is a new line, with no marker the plugin made.
     await browser.executeObsidian(({ app }) => {
       const editor = app.workspace.activeEditor.editor;
       editor.focus();
@@ -332,7 +313,7 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await browser.keys(['Enter']);
     await browser.keys('Next');
     const typed = await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getLine(17)), (l) => l.includes('Next'));
-    expect(typed).toBe('\t\t3.1.2. Next');
+    expect(typed.trim()).toBe('Next');
     await browser.executeObsidian(async ({ app }, path) => {
       await app.workspace.getMostRecentLeaf().setViewState({ type: 'markdown', state: { file: path, mode: 'preview' } });
     }, path);
@@ -348,34 +329,26 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('as-text-reading');
   });
 
-  it('types in a list written as text as in Obsidian\'s own: Enter splits, Backspace after a marker takes it away, Tab only indents, a deleted line counts the rest on, an item moves with what is under it', async function () {
+  it('leaves typing in a list written as text to Obsidian (Enter splits no item into a new one, nothing is counted on), and moves an item with what is under it from the palette', async function () {
     const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
     const at = (line, ch) => browser.executeObsidian(({ app }, line, ch) => { const e = app.workspace.activeEditor.editor; e.focus(); e.setCursor({ line, ch }); }, line, ch);
     await browser.executeObsidian(async ({ app }) => {
-      const file = await app.vault.create(`Politics/Typing ${Date.now()}.md`, '3. Top\n\t3.1. one two\n\t3.2. three\n\t3.3. four\n');
+      const file = await app.vault.create(`Politics/Typing ${Date.now()}.md`, '3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n\t3.3. five\n');
       await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
     });
-    // Enter within an item's words: split there.
     await at(1, 9);
     await browser.keys(['Enter']);
-    expect(await readUntil(value, (t) => t.includes('3.2. two'))).toBe('3. Top\n\t3.1. one\n\t3.2. two\n\t3.3. three\n\t3.4. four\n');
-    // Backspace just after a marker: it goes, and the rest count on.
-    await at(3, 6);
-    await browser.keys(['Backspace']);
-    expect(await readUntil(value, (t) => t.includes('\tthree'))).toBe('3. Top\n\t3.1. one\n\t3.2. two\n\tthree\n\t3.3. four\n');
-    // A line deleted: the rest count on.
-    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.replaceRange('', { line: 2, ch: 0 }, { line: 3, ch: 0 }));
-    expect(await readUntil(value, (t) => !t.includes('two'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n');
-    // Tab with two items selected: Obsidian's own, each line a level in as typed; Shift-Tab, back out.
-    await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.replaceRange('\t3.3. five\n', { line: 4, ch: 0 }); });
-    await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.focus(); e.setSelection({ line: 3, ch: 0 }, { line: 4, ch: 10 }); });
-    await browser.keys(['Tab']);
-    expect(await readUntil(value, (t) => t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t\t3.2. four\n\t\t3.3. five\n');
-    await browser.keys(['Shift', 'Tab']);
-    await browser.keys(['Shift']);
-    expect(await readUntil(value, (t) => !t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n\t3.3. five\n');
-    // An item moved up with what is under it, from the palette's command.
-    await at(3, 8);
+    await browser.keys('more');
+    const typed = await readUntil(value, (t) => t.includes('more'));
+    expect(typed).not.toMatch(/3\.2\. more/);
+    expect(typed).toContain('\t3.2. four\n\t3.3. five');
+    // An item moved up with what is under it (its words), from the palette's command; the markers stay where they were.
+    await browser.executeObsidian(({ app }) => {
+      const e = app.workspace.activeEditor.editor;
+      e.setValue('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n\t3.3. five\n');
+      e.focus();
+      e.setCursor({ line: 3, ch: 8 });
+    });
     await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:move-list-item-up'));
     expect(await readUntil(value, (t) => t.indexOf('four') < t.indexOf('one'))).toBe('3. Top\n\t3.1. four\n\t3.2. one\n\tthree\n\t3.3. five\n');
   });
