@@ -1,0 +1,1 @@
+{ "id": "probe-a", "name": "Probe A", "version": "1.0.0", "minAppVersion": "1.7.2", "description": "Records Obsidian's startup.", "author": "probe", "isDesktopOnly": true }

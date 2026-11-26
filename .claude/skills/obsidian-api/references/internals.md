@@ -10,6 +10,9 @@ Names in minified code change with every release; strings don't. To
 re-derive every list here after an update, run `scripts/obsidian-source.mjs
 --inventory`.
 
+The claims marked ✓ are checked in the real app by the probe kit in `ci/`
+(16 probes, all passing on 1.15.1; `references/testing.md`).
+
 Nothing below is public API unless the main skill says so. Read it to
 understand behaviour, and guard anything you call.
 
@@ -65,25 +68,35 @@ the stopwatch) report.
    - its `onload` is awaited, then its `styles.css` is added;
    - one taking over 3 s shows a "hanging" notice with a Disable button.
 10. **`vault.load`.** The vault's file tree is listed: `create` fires for
-    every file.
+    every file and folder. ✓
 11. **`vault.metadata`.** The metadata cache loads from IndexedDB and queues
-    changed files for the worker. Its internal `finished` event fires here.
+    changed files for the worker. Its internal `finished` event fires here
+    (and again once that queue is empty). ✓
 12. **`workspace.layout.load`, `.open`, `.finalize`.** The saved layout is
     restored (tabs not in front stay deferred), and the opening behaviour
     runs.
 13. **Layout-ready.** `onLayoutReady` callbacks run, and the snapshot is
     removed shortly after. CLI commands that arrived early run now.
 14. **Later.** The worker finishes changed files (`changed` per file), and
-    links resolve (`resolved`).
+    links resolve (`resolved`, once per batch). ✓
 
 What this means for a plugin:
 - **In `onload` the vault is empty.** `getFiles()` returns nothing, and the
-  metadata cache and the layout aren't there yet. That is why work belongs in
-  `onLayoutReady`, and work that needs every note's metadata waits for
-  `resolved`.
-- **A slow `onload` delays every plugin after it, and the app.** Await
-  nothing slow there.
-- **`styles.css` arrives after `onload`.** A view drawn inside `onload`
+  metadata cache and the layout aren't there yet. ✓ That is why work belongs
+  in `onLayoutReady`.
+- **Layout-ready doesn't mean indexed.** On a first start (or after many
+  changes) most notes are still being parsed at layout-ready: in the probe,
+  39 of 40. `resolved` then fires once per batch, as often as once per file.
+  On a warm start, everything is indexed by layout-ready and `resolved` fires
+  once. ✓ To know every note is indexed:
+  - wait until `metadataCache.inProgressTaskCount === 0` (internal; guard
+    it), checked on each `resolved`;
+  - or wait for the second `finished`;
+  - or check only the files you need with `getFileCache(file)`.
+- **A slow `onload` delays every plugin after it, and the app.** ✓ Await
+  nothing slow there. `dev:startup` shows each plugin's cost as
+  `communityPlugins.<id>`; a 500 ms wait in `onload` reads as 509 ms.
+- **`styles.css` arrives after `onload`.** ✓ A view drawn inside `onload`
   appears unstyled for a moment.
 
 ## How a plugin is loaded
@@ -122,7 +135,7 @@ What this means for a plugin:
 3. the theme (`customCss.styleEl`);
 4. each enabled snippet.
 
-At equal specificity, later wins: **a theme or snippet overrides a plugin**.
+At equal specificity, later wins: **a theme or snippet overrides a plugin**. ✓
 Snippets and themes reload 100 ms after their files change.
 
 ## The startup snapshot (1.15.1)
@@ -313,7 +326,7 @@ Typed ones are in the main skill. These are also fired, and are internal:
 
 | What | After |
 | --- | --- |
-| A Markdown note, while typing | 2 s after the last change, so `modify` follows about 2 s after typing stops |
+| A Markdown note, while typing | 2 s after the last change, so `modify` follows about 2 s after typing stops (measured: 2,009–2,013 ms ✓) |
 | A `TextFileView`'s `requestSave()` | 2 s |
 | Folds | 0.5 s |
 | `workspace.json` (`requestSaveLayout`) | 1 s |
@@ -332,9 +345,15 @@ Typed ones are in the main skill. These are also fired, and are internal:
   Core plugins add their own (`daily`, `unique`, …). With `uriCallbacks` on,
   `x-success` / `x-error` callbacks work.
 - **The command line:**
-  - **What it is.** The `obsidian` executable is the app itself. Settings
-    registers it: on macOS a link at `/usr/local/bin/obsidian`, on Windows
-    in PATH.
+  - **Off by default.** Turn it on in Settings → General → Command line
+    interface; this is stored in `obsidian.json`. In a test, call
+    `electron.ipcRenderer.sendSync('cli', true)` in the app. ✓
+  - **What it is.** Two executables:
+    - the `obsidian` executable, which is the app itself (run as root, it
+      needs `--no-sandbox`);
+    - `obsidian-cli`, a native client of about 18 KB beside it, which talks
+      to the socket directly and is what `/usr/local/bin/obsidian` links to
+      on macOS. On Windows, Settings adds the app's folder to PATH.
   - **How it reaches the app.** It passes its arguments to the running app
     through `~/.obsidian-cli.sock` (`$XDG_RUNTIME_DIR` on Linux, a named
     pipe on Windows), and starts the app when none is running.
@@ -347,12 +366,12 @@ Typed ones are in the main skill. These are also fired, and are internal:
 | --- | --- |
 | `plugin:reload id=<id>` | Reload a plugin after building it |
 | `dev:errors [clear]` | The errors captured since start (or since cleared) |
-| `dev:console [clear]` | The console messages captured |
-| `eval code=<js>` | Run JavaScript in the app (it may `await`; the last value is returned) |
+| `dev:console [clear]` | The console messages captured, once `dev:debug on` has attached the debugger ✓ |
+| `eval code=<js>` | Run JavaScript in the app: an expression prints `=> value`; statements with `await` end in `return x` ✓ |
 | `dev:dom selector=<css>` | The elements a selector matches |
 | `dev:css selector=<css>` | The CSS rules that apply, with their source |
 | `dev:screenshot path=<file>` | A screenshot of the window |
-| `dev:startup [format=json]` | The startup time breakdown, by the marks above |
+| `dev:startup [format=json]` | The startup time breakdown, by the marks above, with each plugin as `communityPlugins.<id>` ✓ |
 | `dev:cdp method=<CDP.method>`, `dev:debug on` | Chrome DevTools Protocol |
 | `dev:mobile on` | Mobile emulation |
 | `devtools`, `reload`, `restart` | What they say |

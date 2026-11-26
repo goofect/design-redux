@@ -196,6 +196,8 @@ source:
 
 ## Testing
 
+The full picture, CI included, is in `references/testing.md`.
+
 - **wdio-obsidian-service 3.5.0** (1 Nov 2026) supports WebdriverIO 10. Its
   releases:
   - 3.4.0 resolves `latest` per platform;

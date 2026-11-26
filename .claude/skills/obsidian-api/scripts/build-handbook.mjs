@@ -35,6 +35,7 @@ const ORDER = [
   ['architecture.md', 'Architecture and file layout'],
   ['recipes.md', 'Recipes'],
   ['community.md', 'What the community says'],
+  ['testing.md', 'Testing, in CI and the real app'],
 ];
 
 const slug = (t) => t.toLowerCase().replace(/[`*_]/g, '').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
@@ -89,6 +90,8 @@ architecture, performance and working recipes. Built ${new Date().toISOString().
   \`onload\` the vault is empty), how plugins load, every event, setting and
   file. Its command line (\`obsidian plugin:reload\`, \`dev:errors\`, \`eval\`,
   \`dev:screenshot\`) lets you test a plugin in the running app yourself.
+- **Testing.** Section 10 shows how to test in the real Obsidian, in CI too,
+  and how to drive its command line from a test: you can check your own work.
 - **Code.** Prefer the recipes (section 8): they were written against this API
   and most were run. Register everything through the plugin or a
   \`Component\`; write notes with \`vault.process\` / \`processFrontMatter\`;

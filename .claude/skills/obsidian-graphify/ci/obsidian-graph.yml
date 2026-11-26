@@ -1,0 +1,77 @@
+# Builds Obsidian's component graph for graphify in CI, from a real Obsidian.
+# Copy to .github/workflows/obsidian-graph.yml and set SKILL to where this skill lives.
+# Runs weekly (Obsidian updates in place, so the graph follows it) and on demand; uploads
+# obsidian-graph/ as an artifact, and with `publish: true` also commits it to a branch.
+name: obsidian-graph
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'          # Mondays
+  workflow_dispatch:
+    inputs:
+      app:       { description: 'Obsidian app version (latest, latest-beta, 1.x.y)', default: 'latest' }
+      installer: { description: 'Installer version (latest, earliest, 1.x.y)', default: 'latest' }
+      publish:   { description: 'Commit the graph to the obsidian-graph branch', type: boolean, default: false }
+
+permissions:
+  contents: write
+
+env:
+  SKILL: .claude/skills/obsidian-graphify
+  OBSIDIAN_APP: ${{ inputs.app || 'latest' }}
+  OBSIDIAN_INSTALLER: ${{ inputs.installer || 'latest' }}
+  OBSIDIAN_CACHE: .obsidian-cache
+  # Only for latest-beta: an Obsidian Insiders account (2FA off), as repository secrets.
+  OBSIDIAN_EMAIL: ${{ secrets.OBSIDIAN_EMAIL }}
+  OBSIDIAN_PASSWORD: ${{ secrets.OBSIDIAN_PASSWORD }}
+
+jobs:
+  graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+
+      - name: Tools
+        run: |
+          npm i --no-save @wdio/cli@9 @wdio/local-runner@9 @wdio/mocha-framework@9 wdio-obsidian-service wdio-obsidian-reporter obsidian
+          pip install graphifyy
+          sudo apt-get update -q && sudo apt-get install -yq xvfb
+
+      - name: Cache Obsidian's downloads (weekly)
+        uses: actions/cache@v4
+        with:
+          path: .obsidian-cache
+          key: obsidian-${{ env.OBSIDIAN_APP }}-${{ env.OBSIDIAN_INSTALLER }}-${{ github.run_id }}
+          restore-keys: obsidian-${{ env.OBSIDIAN_APP }}-${{ env.OBSIDIAN_INSTALLER }}-
+
+      - name: Extract the live app
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" npx wdio run $SKILL/ci/wdio.conf.mjs
+
+      - name: Build the graph (app code, typings, clusters)
+        env: { GRAPHIFY_BACKEND: none }
+        run: node $SKILL/scripts/build-graph.mjs --dts node_modules/obsidian --out obsidian-graph
+
+      - name: Join this repository's plugin, if it is one
+        if: hashFiles('manifest.json') != ''
+        env: { GRAPHIFY_BACKEND: none }
+        run: |
+          graphify update . --no-cluster
+          node $SKILL/scripts/link-plugin.mjs --plugin . --obsidian obsidian-graph/graph.json --out obsidian-graph/with-plugin
+
+      - uses: actions/upload-artifact@v4
+        with: { name: obsidian-graph, path: obsidian-graph, retention-days: 30 }
+
+      - name: Publish to the obsidian-graph branch
+        if: inputs.publish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin obsidian-graph || true
+          git worktree add -B obsidian-graph ../graph-branch origin/obsidian-graph 2>/dev/null || git worktree add -B obsidian-graph ../graph-branch
+          rm -rf ../graph-branch/* && cp -r obsidian-graph/. ../graph-branch/
+          cd ../graph-branch && git add -A && git commit -qm "Obsidian graph: $OBSIDIAN_APP" && git push -q origin obsidian-graph || echo "nothing new"

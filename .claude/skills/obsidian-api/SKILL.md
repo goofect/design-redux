@@ -53,6 +53,14 @@ The references:
   - the metadata cache and the watcher, and save timings;
   - URIs, the command line and its developer commands;
   - the managed policy.
+- `references/testing.md`: testing in CI:
+  - unit, simulation and real-app tests;
+  - wdio-obsidian-service and the version matrix;
+  - GitHub Actions;
+  - driving Obsidian's command line from tests;
+  - startup budgets;
+  - the probe kit in `ci/`, which checks this skill's claims about
+    Obsidian in the real app.
 - `references/javascript.md`:
   - the Electron, Chromium, Node and V8 versions per installer;
   - which language features, Web APIs and CSS are safe;
@@ -133,9 +141,11 @@ The detail is in `references/javascript.md`.
 ## Lifecycle
 
 - `onload()` registers. The work waits for `workspace.onLayoutReady(fn)`
-  (`workspace.layoutReady` says if it already has). Work that needs every
-  note indexed also waits for the metadata cache's `resolved` event: since
-  1.15.1 the workspace shows before indexing ends.
+  (`workspace.layoutReady` says if it already has).
+- **Layout-ready doesn't mean every note is indexed.** On a first start, most
+  notes are still parsing, and `resolved` fires once per batch. Work that
+  needs every note waits for `metadataCache.inProgressTaskCount === 0`
+  (internal, guarded) on a `resolved`, or reads only the files it needs.
 - **In `onload` the vault is empty.** Community plugins load before the
   vault is listed, one at a time in `community-plugins.json`'s order, each
   `onload` awaited; one over 3 s gets a "hanging" notice. A plugin's
