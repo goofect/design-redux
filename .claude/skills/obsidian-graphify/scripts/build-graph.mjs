@@ -178,6 +178,24 @@ if (asarPath && fs.existsSync(asarPath)) {
     link(CSS, fam, 'defines', 'app.css');
     link(fam, node(id('obsidian_css', name), name, 'css-variable', 'app.css', { value }), 'contains', 'app.css');
   }
+
+  // Every class app.css styles (the live DOM's regions are among them), and the variables
+  // each one uses and sets: so "where is --tab-* used" reaches the elements.
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const before2 = nodes.size;
+  for (const m of bare.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+    const classes = [...new Set([...m[1].matchAll(/\.([a-zA-Z][\w-]*)/g)].map((c) => c[1]))];
+    if (!classes.length) continue;
+    const uses = [...new Set([...m[2].matchAll(/var\(\s*(--[\w-]+)/g)].map((v) => v[1]))];
+    const sets = [...new Set([...m[2].matchAll(/(?:^|;)\s*(--[\w-]+)\s*:/g)].map((v) => v[1]))];
+    for (const cls of classes) {
+      const cid = node(id('obsidian_dom', cls), `.${cls}`, 'css-class', 'app.css');
+      link(CSS, cid, 'styles', 'app.css');
+      for (const v of uses) if (nodes.has(id('obsidian_css', v))) link(cid, id('obsidian_css', v), 'uses_css_var', 'app.css');
+      for (const v of sets) if (nodes.has(id('obsidian_css', v))) link(cid, id('obsidian_css', v), 'sets_css_var', 'app.css');
+    }
+  }
+  console.log(`app.css   ${nodes.size - before2} classes beyond the live DOM's`);
   console.log(`app code  ${nodes.size - before} nodes from ${path.basename(asarPath)}`);
 } else console.log('app code  no .asar found (pass --asar, or set OBSIDIAN_CACHE): skipped');
 
@@ -190,11 +208,18 @@ if (fs.existsSync(path.join(dtsDir, 'obsidian.d.ts')) && graphify) {
   execFileSync('graphify', ['update', tmp, '--no-cluster'], { stdio: 'ignore', env: { ...process.env, GRAPHIFY_BACKEND: 'none' } });
   const typed = JSON.parse(fs.readFileSync(path.join(tmp, 'graphify-out', 'graph.json'), 'utf8'));
   const typedIds = new Set(typed.nodes.map((n) => n.id));
-  for (const n of nodes.values()) if (/^(public-class|method)$/.test(n.type)) n.metadata.typed = typedIds.has(n.id);
+  // A property is typed when its class declares the field.
+  const fieldsOf = new Map(typed.nodes.filter((n) => n._ts_fields).map((n) => [n.id, new Set(Object.keys(n._ts_fields))]));
+  const owner = new Map(live ? live.links.filter((e) => e.relation === 'property').map((e) => [e.target, e.source]) : []);
+  for (const n of nodes.values()) {
+    if (/^(public-class|method|static-method|public-function|public-object)$/.test(n.type)) n.metadata.typed = typedIds.has(n.id);
+    else if (n.type === 'property') n.metadata.typed = typedIds.has(n.id) || !!fieldsOf.get(owner.get(n.id))?.has(n.label.slice(1));
+    else if (/^internal-(class|method)$/.test(n.type)) n.metadata.typed = false;
+  }
   absorb(typed);
   link('obsidian_module', 'obsidian_d', 'declared_in', 'obsidian.d.ts');
-  const untyped = [...nodes.values()].filter((n) => n.metadata?.typed === false).length;
-  console.log(`typings   ${typed.nodes.length} nodes from ${dtsDir}; ${untyped} live classes and methods are not in them (internal)`);
+  const untyped = [...nodes.values()].filter((n) => n.metadata?.typed === false && !/^internal-/.test(n.type)).length;
+  console.log(`typings   ${typed.nodes.length} nodes from ${dtsDir}; ${untyped} live members of the public API are not in them (internal)`);
 } else console.log(`typings   skipped (${graphify ? `no obsidian.d.ts in ${dtsDir}` : 'graphify is not installed'})`);
 
 // ---- write, check, cluster ---------------------------------------------------------------
@@ -205,6 +230,11 @@ const kinds = graph.nodes.reduce((m, n) => ((m[n.type ?? n.file_type] = (m[n.typ
 console.log(`graph     ${graph.nodes.length} nodes, ${links.length} links → ${path.join(out, 'graph.json')}`);
 console.log(`          ${Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}`);
 if (graphify && !has('--no-cluster')) {
-  const r = spawnSync('graphify', ['cluster-only', out, '--graph', path.join(out, 'graph.json')], { encoding: 'utf8', env: { ...process.env, GRAPHIFY_BACKEND: 'none' } });
+  // With no model, a first pass can leave "Community N" placeholders; the second names each after its hub.
+  const flags = ['cluster-only', out, '--graph', path.join(out, 'graph.json'), ...(graph.nodes.length > 5000 ? ['--no-viz'] : [])];
+  // The build is from scratch: the last clustering goes, or graphify refuses a graph that lost nodes.
+  fs.rmSync(path.join(out, 'graphify-out'), { recursive: true, force: true });
+  let r;
+  for (let pass = 0; pass < 2; pass++) r = spawnSync('graphify', flags, { encoding: 'utf8', env: { ...process.env, GRAPHIFY_BACKEND: 'none' } });
   console.log(r.status === 0 ? `clustered ${r.stdout.trim().split('\n').slice(-2).join(' ')}` : `cluster-only failed: ${r.stderr.trim().split('\n').slice(-3).join(' ')}`);
 }

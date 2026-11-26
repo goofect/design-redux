@@ -50,3 +50,6 @@ tests/screenshots/failed/
 
 # The specimen page, built by tools/specimen.mjs for the screenshot tests
 tests/_specimen.html
+
+# The graphify graph of Obsidian, built by .claude/skills/obsidian-graphify
+obsidian-graph

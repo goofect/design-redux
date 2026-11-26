@@ -46,6 +46,16 @@ for (const [name, value] of exportsOf) {
     const cid = node(id('obsidian_d', name), name, 'public-class');
     link(MODULE, cid, 'exports');
     for (const m of methodsOf(value.prototype)) link(cid, node(id('obsidian_d', name, m), `.${m}()`, 'method'), 'method');
+    // Getters and setters on the prototype, and the class's own static methods.
+    for (const m of Object.getOwnPropertyNames(value.prototype)) {
+      const d = Object.getOwnPropertyDescriptor(value.prototype, m);
+      if (d && (d.get || d.set)) link(cid, node(id('obsidian_d', name, m), `.${m}`, 'property', { get: !!d.get, set: !!d.set }), 'property');
+    }
+    for (const m of Object.getOwnPropertyNames(value)) {
+      if (/^(length|name|prototype|arguments|caller)$/.test(m)) continue;
+      const d = Object.getOwnPropertyDescriptor(value, m);
+      if (d && typeof d.value === 'function') link(cid, node(id('obsidian_d', name, m), `${name}.${m}()`, 'static-method'), 'static_method');
+    }
     const parent = Object.getPrototypeOf(value);
     if (parent && parent !== Function.prototype) {
       const pid = classId(parent) ?? node(id('obsidian_internal_class', parent.name || 'anonymous', name), `${parent.name || '(anonymous)'} (internal base of ${name})`, 'internal-class');
@@ -71,8 +81,18 @@ function classOf(obj) {
 
 // --- 2. The running app: app and the objects it holds ---------------------------------
 const isDom = (v) => v instanceof Node || v instanceof Window || (typeof v === 'object' && v && 'nodeType' in v && 'ownerDocument' in v);
-const KEEP_DEEPER = new Set(['app.workspace', 'app.vault', 'app.metadataCache', 'app.internalPlugins', 'app.plugins', 'app.customCss', 'app.workspace.rootSplit', 'app.workspace.leftSplit', 'app.workspace.rightSplit']);
+// The main services are walked two levels deeper than the rest.
+const DEEPER = /^app\.(workspace|vault|metadataCache|internalPlugins|plugins|customCss|setting|metadataTypeManager|viewRegistry|embedRegistry|keymap|hotkeyManager)\b/;
 const maxDepth = options.depth ?? 2;
+const limit = (p) => maxDepth + (DEEPER.test(p) ? 2 : 0);
+// The vault's own data (keyed by a file path or a file name) is counted, never listed.
+// So are content hashes, and the records a service keeps (caches, hotkeys, each settings row).
+const dataKey = (k) => typeof k === 'string' && (/[/\\]/.test(k) || /\.[a-z0-9]{1,6}$/i.test(k) || /^[0-9a-f]{32,}$/.test(k));
+const DATA = /^(metadataCache|fileCache|resolvedLinks|unresolvedLinks|defaultKeys|customKeys|bakedHotkeys|bakedIds|settingItems|tabNavItems|fileMap|properties)$/;
+const record = (x) => { const p = Object.getPrototypeOf(x); return p === Object.prototype || p === null || Array.isArray(x); };
+const ITEMS = 40;                                         // a list or map longer than this is counted
+const emitterList = [];                                   // every Events object met, with its path
+const internalClass = new Map();                          // internal constructor → its node, named by first path
 const pathOf = new WeakMap();                            // object → its first path
 const idOfPath = new Map();                               // path → id, unique even if two paths normalise alike
 const takenBy = new Map();
@@ -101,22 +121,45 @@ while (queue.length) {
   });
   if (pub) link(nid, id('obsidian_d', publicName.get(pub)), 'instance_of');
   if (internal && protoMethods.size) link(nid, pub ? id('obsidian_d', publicName.get(pub)) : MODULE, 'extends_internally', 'INFERRED');
-  if (depth >= maxDepth && !KEEP_DEEPER.has(path)) continue;
+  // Its internal class, once per constructor, with the methods no typing declares.
+  if (internal && protoMethods.size) {
+    let ic = internalClass.get(internal);
+    if (!ic) {
+      ic = node(id('obsidian_internal', path), `${path} (internal class)`, 'internal-class', { minified: internal.name || null, extends: pub ? publicName.get(pub) : null });
+      internalClass.set(internal, ic);
+      for (const m of protoMethods) link(ic, node(id(ic, m), `.${m}()`, 'internal-method', { owner: path }), 'method');
+      if (pub) link(ic, id('obsidian_d', publicName.get(pub)), 'inherits');
+    }
+    link(nid, ic, 'instance_of');
+  }
+  const table = obj._;
+  if (table && typeof table === 'object' && !Array.isArray(table) && Object.values(table).every(Array.isArray)) emitterList.push([path, obj]);
+  if (depth >= limit(path) || (obsidian.TAbstractFile && obj instanceof obsidian.TAbstractFile)) continue; // a file is the person's, not Obsidian's
+  const follow = (v, child) => {
+    link(nid, rt(child), 'has');
+    if (!pathOf.has(v)) { pathOf.set(v, child); queue.push([child, v, depth + 1]); }
+  };
   for (const key of own) {
     const v = obj[key];
     if (key === '_' || !v || typeof v !== 'object' || isDom(v) || ArrayBuffer.isView(v)) continue; // `_`: an Events' listeners (section 5)
+    if (depth > 0 && DATA.test(key)) { nodes.get(nid).metadata[`${key}.size`] = v.length ?? v.size ?? Object.keys(v).length; continue; }
     if (Array.isArray(v) || v instanceof Map || v instanceof Set) {
-      nodes.get(nid).metadata[`${key}.size`] = v.length ?? v.size;
+      const size = v.length ?? v.size;
+      nodes.get(nid).metadata[`${key}.size`] = size;
+      const items = v instanceof Map ? [...v.entries()] : [...v].map((x, i) => [i, x]);
+      if (size > ITEMS || items.some(([k]) => dataKey(k))) continue;
+      for (const [k, x] of items)       // a list's class instances are components; its plain records are data
+        if (x && typeof x === 'object' && !isDom(x) && !ArrayBuffer.isView(x) && !record(x))
+          follow(x, pathOf.get(x) ?? (typeof k === 'number' ? `${path}.${key}[${k}]` : `${path}.${key}.${k}`));
       continue;
     }
-    const size = Object.keys(v).length;
+    const keys = Object.keys(v);
     const plain = Object.getPrototypeOf(v) === Object.prototype;
-    if (plain && size > 150) { nodes.get(nid).metadata[`${key}.size`] = size; continue; } // a big map (files, caches)
-    const child = pathOf.get(v) ?? `${path}.${key}`;
-    link(nid, rt(child), 'has');
-    if (!pathOf.has(v)) { pathOf.set(v, child); queue.push([child, v, depth + 1]); }
+    if (plain && (keys.length > 150 || keys.some(dataKey))) { nodes.get(nid).metadata[`${key}.size`] = keys.length; continue; } // files, caches
+    follow(v, pathOf.get(v) ?? `${path}.${key}`);
   }
 }
+const rtNode = (path) => node(rt(path), path, 'runtime-object');
 
 // --- 3. Core plugins, community plugins, views and file types -------------------------
 const views = app.viewRegistry?.viewByType ? Object.keys(app.viewRegistry.viewByType) : [];
@@ -128,6 +171,7 @@ const corePlugins = app.internalPlugins?.plugins ?? {};
 for (const [pid, p] of Object.entries(corePlugins)) {
   const cp = node(id('obsidian_core_plugin', pid), `${pid} (core plugin)`, 'core-plugin', {
     enabled: !!p.enabled, name: p.instance?.name ?? null, description: p.instance?.description ?? null,
+    ...(options.defaultEnabled ? { enabledByDefault: options.defaultEnabled.includes(pid) } : {}),
   });
   link(rt('app.internalPlugins'), cp, 'contains');
   for (const type of Object.keys(p.views ?? {})) link(cp, node(id('obsidian_view', type), `${type} (view)`, 'view-type'), 'registers_view');
@@ -154,12 +198,11 @@ for (const [cid, c] of Object.entries(commands)) {
 }
 
 // --- 5. Events each part listens to now (Events keeps them in `_`) -----------------------
-const emitters = { workspace: app.workspace, vault: app.vault, metadataCache: app.metadataCache, 'vault.adapter': app.vault?.adapter, internalPlugins: app.internalPlugins, plugins: app.plugins, customCss: app.customCss };
-for (const [name, em] of Object.entries(emitters)) {
-  const table = em && em._;
-  if (!table || typeof table !== 'object') continue;
-  for (const [ev, handlers] of Object.entries(table))
-    link(rt(`app.${name}`), node(id('obsidian_event', name, ev), `${name}.on('${ev}')`, 'event', { emitter: name, listeners: Array.isArray(handlers) ? handlers.length : null }), 'emits');
+// Every Events object the walk met, not only the main services.
+for (const [path, em] of emitterList) {
+  const name = path.replace(/^app\.?/, '') || 'app';
+  for (const [ev, handlers] of Object.entries(em._))
+    link(rt(path), node(id('obsidian_event', name, ev), `${name}.on('${ev}')`, 'event', { emitter: name, listeners: Array.isArray(handlers) ? handlers.length : null }), 'emits');
 }
 
 // --- 6. Settings (the vault's config, as set now) ---------------------------------------
@@ -197,6 +240,29 @@ for (const key of Object.getOwnPropertyNames(window)) {
   if (plainKeys.has(key) || /^(webkit|on|__|\$)/.test(key) || /^\d/.test(key)) continue;
   link(node('obsidian_window', 'window', 'global-scope'), node(id('obsidian_global', key), `window.${key}`, 'global', { typeof: typeof window[key] }), 'defines_global');
 }
+
+// --- 9. Registries: icons, code block languages, embeds, property types, settings tabs, ribbon --
+const keysOf = (o) => (o instanceof Map ? [...o.keys()] : o && typeof o === 'object' ? Object.keys(o) : []);
+const icons = typeof obsidian.getIconIds === 'function' ? obsidian.getIconIds() : [];
+if (icons.length) {
+  const set = node('obsidian_icons', 'icons (getIconIds)', 'icon-set', { count: icons.length });
+  link(MODULE, set, 'contains');
+  for (const icon of icons) link(set, node(id('obsidian_icon', icon), `icon: ${icon}`, 'icon'), 'has_icon');
+}
+const renderer = obsidian.MarkdownPreviewRenderer;
+for (const lang of keysOf(renderer?.codeBlockPostProcessors))
+  link(id('obsidian_d', 'MarkdownPreviewRenderer'), node(id('obsidian_code_block', lang), `\`\`\`${lang}`, 'code-block-language'), 'renders_code_block');
+if (Array.isArray(renderer?.postProcessors)) node(id('obsidian_d', 'MarkdownPreviewRenderer'), 'MarkdownPreviewRenderer', 'public-class', { postProcessors: renderer.postProcessors.length });
+for (const ext of keysOf(app.embedRegistry?.embedByExtension))
+  link(rtNode('app.embedRegistry'), node(id('obsidian_extension', ext), `.${ext}`, 'file-extension'), 'embeds');
+for (const type of keysOf(app.metadataTypeManager?.registeredTypeWidgets))
+  link(rtNode('app.metadataTypeManager'), node(id('obsidian_property_type', type), `${type} (property type)`, 'property-type', { name: app.metadataTypeManager.registeredTypeWidgets[type]?.name ?? null }), 'registers_type');
+for (const [list, tabs] of [['settingTabs', app.setting?.settingTabs], ['pluginTabs', app.setting?.pluginTabs]])
+  for (const tab of Array.isArray(tabs) ? tabs : [])
+    if (tab?.id) link(rtNode('app.setting'), node(id('obsidian_settings_tab', tab.id), `${tab.name ?? tab.id} (settings tab)`, 'settings-tab', { id: tab.id, core: list === 'settingTabs' }), 'has_tab');
+for (const side of ['leftRibbon', 'rightRibbon'])
+  for (const item of app.workspace?.[side]?.items ?? [])
+    if (item?.id) link(rtNode(`app.workspace.${side}`), node(id('obsidian_ribbon', item.id), `${item.title ?? item.id} (ribbon)`, 'ribbon-action', { icon: item.icon ?? null }), 'has_action');
 
 // --- done ---------------------------------------------------------------------------------
 const inventory = {

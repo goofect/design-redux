@@ -21,23 +21,24 @@ format. With that graph, an AI can answer questions with `graphify query`, `expl
 It needs no model at any step: extraction is code, and graphify's clustering and community
 names run with `GRAPHIFY_BACKEND=none`.
 
-## What it captures (Obsidian 1.15.1: 4,214 nodes, 4,583 links)
+## What it captures (Obsidian 1.15.1: 9,479 nodes, 20,203 links)
 
 | Source | Node kinds | Relations |
 | --- | --- | --- |
-| **The live app** (`scripts/extract-live.js`, run inside Obsidian) | every export of `obsidian` (101 classes with 1,238 methods, 51 functions, 7 objects); the `app` object and what it holds (86 runtime objects: `app.workspace`, `app.vault.adapter`, `app.internalPlugins`, …); 30 core plugins and the community plugins; 23 view types and 25 file extensions; 204 commands by owner; 40 events with live listeners, per emitter; 106 CLI handlers; 48 DOM regions; body classes; 49 globals | `exports`, `method`, `inherits`, `has`, `instance_of`, `extends_internally`, `contains`, `registers_view`, `opens_in`, `provides_command`, `emits`, `provides_cli`, `contains_dom`, `has_class`, `defines_global` |
-| **The app's code** (`scripts/build-graph.mjs`, from the `.asar` the CI downloads) | 69 triggered event names; 54 settings with defaults; startup stages; URI actions; modules a plugin can `require`; 54 IPC channels; config files; storage; libraries; 1,227 CSS variables in 131 families | `triggers`, `is_event`, `has_setting`, `contains`, `handles_uri`, `provides_to_plugins`, `handles_ipc`, `uses_file`, `stores_in`, `bundles`, `defines` |
+| **The live app** (`scripts/extract-live.js`, run inside Obsidian) | every export of `obsidian` (101 classes with 1,238 methods, 36 static methods and 15 getters, 51 functions, 7 objects); the `app` object and what it holds, lists and maps included (372 runtime objects: `app.workspace`, `app.vault.adapter`, `app.internalPlugins`, …); 105 internal classes with their 1,051 methods; all 30 core plugins (each turned on, which were on by default recorded) and the community plugins; 23 view types and 25 file extensions; 227 commands by owner; 80 events with live listeners, on every emitter; 116 CLI handlers; 48 DOM regions; body classes; 60 globals; 1,979 icons; property types, settings tabs, ribbon actions, embeds, code block languages | `exports`, `method`, `static_method`, `property`, `inherits`, `has`, `instance_of`, `extends_internally`, `contains`, `registers_view`, `opens_in`, `embeds`, `provides_command`, `emits`, `provides_cli`, `contains_dom`, `has_class`, `defines_global`, `has_icon`, `registers_type`, `has_tab`, `has_action`, `renders_code_block` |
+| **The app's code** (`scripts/build-graph.mjs`, from the `.asar` the CI downloads) | 69 triggered event names; 54 settings with defaults; startup stages; URI actions; modules a plugin can `require`; 54 IPC channels; config files; storage; libraries; 1,227 CSS variables in 131 families; every class `app.css` styles (1,634 beyond the live DOM's), with the variables each uses and sets | `triggers`, `is_event`, `has_setting`, `contains`, `handles_uri`, `provides_to_plugins`, `handles_ipc`, `uses_file`, `stores_in`, `bundles`, `defines`, `styles`, `uses_css_var`, `sets_css_var` |
 | **The typings** (graphify's own code graph of `obsidian.d.ts`) | every declared class, interface and member | graphify's `contains`, `method`, `inherits`, `implements` |
 
 How the three join:
 - **Shared ids.** The live extractor uses graphify's own code ids for public classes and
   methods (`obsidian_d_workspace`, `obsidian_d_workspace_getleaf`), so the live and typed
   versions are the same node.
-- **Typed or not.** Every live class and method carries `metadata.typed`. On 1.15.1, **831
-  live methods on public classes are not in the typings**: internal API, worth knowing
-  before using one.
+- **Typed or not.** Every live class, method, static method and getter carries
+  `metadata.typed`. On 1.15.1, **911 live members of public classes are not in the
+  typings**, and every `internal-class` and `internal-method` is untyped: internal API, worth
+  knowing before using one.
 - **Other ids:**
-  - runtime objects: `obsidian_rt_<path>`;
+  - runtime objects: `obsidian_rt_<path>`; internal classes: `obsidian_internal_<first path>`;
   - `obsidian_core_plugin_<id>`, `obsidian_view_<type>`, `obsidian_command_<id>`;
   - `obsidian_event_<emitter>_<name>` (a live listener) and `obsidian_event_name_<name>`;
   - `obsidian_setting_<key>`, `obsidian_css_<--var>`, `obsidian_dom_<class>`,
@@ -74,8 +75,9 @@ Choose versions with environment variables:
 The steps:
 - `ci/wdio.conf.mjs` makes a fresh vault: notes with properties, tasks and links, a
   canvas and a base, so their views and parsers exist.
-- `ci/extract.e2e.mjs` waits for layout-ready and an empty indexing queue, opens a note and
-  the main core views, runs the extractor inside the app, and writes `live.json`.
+- `ci/extract.e2e.mjs` waits for layout-ready and an empty indexing queue, turns on every
+  core plugin (the vault is thrown away), opens a note, a canvas, a base and every view that
+  needs no file, runs the extractor inside the app, and writes `live.json`.
 
 In CI: `ci/obsidian-graph.yml` is a GitHub Actions workflow.
 - It runs every Monday and on demand, caches Obsidian's downloads and uploads
@@ -102,17 +104,22 @@ graphify gives everything a plugin imports from `obsidian` one node, `ref_obsidi
 | In the plugin's code | Relation | To |
 | --- | --- | --- |
 | `import { … } from 'obsidian'` | `uses_api` | the public class or function |
-| `app.x`, `app.x.y` | `uses` | the runtime object |
+| `import * as obsidian`, `require('obsidian')` | `uses_api` | the public class or function |
+| `app.x`, `app.x.y`, `app.x.y.z` | `uses` | the deepest runtime object it names |
 | `.on('e')`, `.trigger('e')` | `listens_to` | the event |
 | `executeCommandById('id')` | `runs_command` | the command |
 | a view type it opens or finds | `uses_view` | the view type |
+| `setIcon(el, 'x')`, `addRibbonIcon('x')` | `uses_icon` | the icon |
+| `registerMarkdownCodeBlockProcessor('x')` | `renders_code_block` | the language |
 | `getConfig('key')` | `reads_setting` | the setting |
 | `getPluginById('id')` | `uses_core_plugin` | the core plugin |
 | `var(--x)` in its CSS | `uses_css_var` | Obsidian's CSS variable |
 | an Obsidian class in its selectors | `styles_region` | the DOM region |
 
-On Design Redux, it linked 178 uses from 51 of its 85 files, mostly `app.workspace` (26),
-`app.vault` (24), `Notice`, `TFile` and `TFolder`.
+The files are git's (tracked and untracked, not ignored), so copies in worktrees, test vaults
+and build output stay out; any folder starting with a dot is left out too, and so are the
+plugin graph's nodes from such copies. Tests and tools join only with `--all`: a test's
+stand-in for Obsidian is not a use of it. On Design Redux: 182 uses from 43 of its 80 files.
 
 ## Ask the graph
 
@@ -136,17 +143,23 @@ How to read the answers:
 
 ## Limits, and why
 
-- **The live part holds what this vault and session created.** A view type no core plugin
-  registered, a command a disabled plugin would add, or an event no one listens to yet
-  isn't live. The app's code fills in events, settings and the CLI.
+- **The live part holds what this vault and session created.** Every core plugin is on, but
+  a community plugin's views and commands, or an event no one listens to yet, aren't live. The app's code fills in events, settings and the CLI.
 - **Internal classes are named by path** (`app.commands`, built on `Events`), because their
   own names are minified (`Mw`, `ci`). Methods and fields keep their real names.
-- **The runtime walk stops at depth 2.** It goes deeper for the workspace, vault, metadata
-  cache, plugins and CSS. Maps over 150 entries (files, caches) are counted, not listed.
+- **The runtime walk stops at depth 2**, and two levels deeper for the main services
+  (workspace, vault, metadata cache, plugins, CSS, settings, views, keymap). It follows the
+  class instances in a list or map of up to 40. The person's data is counted, never listed: a
+  file or folder, anything keyed by a path, a file name or a content hash, the caches, the
+  hotkeys and each settings row.
+- **Community names without a model can take two passes.** The first `cluster-only` may save
+  "Community N" placeholders; the second names each after its hub. Both scripts run two, and
+  clear the last clustering first (graphify refuses a graph that lost nodes).
 - **The plugin linking reads source text.** It finds direct uses, so a call through a
   helper or a computed name is not linked.
 - **graphify's `graph.html` loads vis-network from unpkg**, so it needs the network to
-  render. Above about 5,000 nodes, pass `--no-viz` to `cluster-only`.
+  render. Above 5,000 nodes the scripts pass `--no-viz`, so the full graph has no
+  `graph.html`: query it, or serve it over MCP.
 
 ## Pitfalls already solved here, in case you change the scripts
 
