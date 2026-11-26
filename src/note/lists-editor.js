@@ -29,10 +29,14 @@ const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-fo
  * the names of Obsidian's syntax nodes, read where the text starts: a line
  * indented into a code block (hmd-indented-code) has no node over its indent.
  */
+// Obsidian's tokens for code, maths, comments and frontmatter. A node's name is its tokens joined by "_", and since 1.15.0 a
+// closing token gains a "formatting-…-end" segment, so a name is read a segment at a time, never matched whole.
+const SKIPPED = new Set(['hmd-codeblock', 'hmd-indented-code', 'inline-code', 'formatting-code', 'hmd-frontmatter', 'math', 'formatting-math', 'comment', 'formatting-comment']);
+
 function ignored(state, line, indent) {
   for (const pos of [line.from, line.from + indent]) {
     for (let node = syntaxTree(state).resolveInner(pos, 1); node; node = node.parent) {
-      if (/code|frontmatter|math|comment/i.test(node.name)) return true;
+      if (node.name.split('_').some((segment) => SKIPPED.has(segment))) return true;
     }
   }
   return false;

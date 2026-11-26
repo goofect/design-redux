@@ -77,7 +77,8 @@ function underList(lineAt, n) {
 export function codeRuns(state) {
   const doc = state.doc;
   const code = new Set();
-  syntaxTree(state).iterate({ enter: (node) => void (/hmd-indented-code/.test(node.name) && code.add(doc.lineAt(node.from).number)) });
+  // Tokens a segment at a time (1.15.0 adds segments to names), never the whole name.
+  syntaxTree(state).iterate({ enter: (node) => void (node.name.split('_').includes('hmd-indented-code') && code.add(doc.lineAt(node.from).number)) });
   const runs = [];
   Array.from(code).sort((a, b) => a - b).forEach((n) => {
     const last = runs[runs.length - 1];

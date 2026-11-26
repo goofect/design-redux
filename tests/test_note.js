@@ -519,7 +519,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const p = d.createElement('p');
     p.textContent = '1.1. one\n1.2. two\n1.2.1. deep';
     lists.render(section(p));
-    assert.deepStrictEqual(shape(p.querySelector('.dr-marked-list')), [['1.1.', 'one'], ['1.2.', 'two'], ['1.2.1.', 'deep']]);
+    // With no source (an embed), an outline number says how deep it is: 1.2.1. sits under 1.2.
+    assert.deepStrictEqual(shape(p.querySelector('.dr-marked-list')), [['1.1.', 'one'], ['1.2.', 'two']]);
+    assert.deepStrictEqual(shape(p.querySelector('.dr-marked-list .dr-marked-list')), [['1.2.1.', 'deep']]);
     const li = d.createElement('li');
     li.append('Intro\n1.1 Background\n1.2 Scope');
     lists.render(section(li));

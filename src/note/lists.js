@@ -16,6 +16,8 @@
 /* as the text it is (outline-text.js). The note's text is as written. */
 /* ------------------------------------------------------------------ */
 
+import { Prec } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
 import { editorInfoField, editorLivePreviewField } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { listLines, numberLines } from './lists-editor.js';
@@ -52,7 +54,18 @@ export class MarkedLists extends Feature {
       const info = editorInfoField ? state.field(editorInfoField, false) : null;
       return (info && info.file && info.file.path) || '';
     };
-    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live));
+    // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists. In the editor's own
+    // keymap, before Obsidian's: each says false on a line that is no item of these, so Obsidian's keys run there.
+    const on = (step) => (view) => {
+      const info = editorInfoField ? view.state.field(editorInfoField, false) : null;
+      return !!(info && info.editor) && step(info.editor);
+    };
+    const keys = Prec.high(keymap.of([
+      { key: 'Enter', run: on((editor) => this.carryOn(editor)) },
+      { key: 'Tab', run: on((editor) => this.indent(editor)) },
+      { key: 'Shift-Tab', run: on((editor) => this.outdent(editor)) },
+    ]));
+    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live), keys);
     // A note's numbering changed: its editors and reading views drawn again.
     this.known = new Map();
     this.listen(this.app.metadataCache, 'changed', (file) => {
@@ -64,17 +77,6 @@ export class MarkedLists extends Feature {
     });
     this.redrawReading();
     this.add(() => this.redrawReading()); // the feature is off by now: the lists go back to the paragraphs they were
-    // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists.
-    const keys = (e) => {
-      if (e.isComposing || e.altKey || e.metaKey || e.ctrlKey) return;
-      if (e.key !== 'Tab' && (e.key !== 'Enter' || e.shiftKey)) return;
-      const view = this.app.workspace.activeEditor || null;
-      const editor = view && view.editor;
-      if (!editor || !e.target.closest || !e.target.closest('.cm-content')) return;
-      const done = e.key === 'Enter' ? this.carryOn(editor) : e.shiftKey ? this.outdent(editor) : this.indent(editor);
-      if (done) e.preventDefault();
-    };
-    this.eachWindow((doc) => this.listenDom(doc, 'keydown', keys, true));
   }
 
   /** The marked item the cursor is on, if its kind is turned on and nothing spans lines. */

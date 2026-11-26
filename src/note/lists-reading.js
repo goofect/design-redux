@@ -82,6 +82,14 @@ export function findList(block) {
 
 /** Each item's depth, by the note's source lines: the next line opening with its marker. */
 function depths(items, source) {
+  // No source (an embed): an outline number says how deep it is (3.1.1 is three parts), and a letter or numeral sits under it.
+  if (!source.length) {
+    let outline = -1;
+    return items.map(({ mark }) => {
+      if (/^\d+(?:\.\d+)+$/.test(mark.marker)) return (outline = mark.marker.split('.').length - 2) * 4;
+      return (outline + 1) * 4;
+    });
+  }
   let at = 0;
   let last = 0;
   return items.map(({ mark }) => {
