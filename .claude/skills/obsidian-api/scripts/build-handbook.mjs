@@ -29,6 +29,7 @@ fs.mkdirSync(out, { recursive: true });
 const ORDER = [
   ['javascript.md', 'JavaScript in Obsidian'],
   ['markdown.md', 'How Obsidian reads Markdown'],
+  ['internals.md', 'Inside Obsidian'],
   ['areas.md', 'More of the API'],
   ['performance.md', 'Performance'],
   ['architecture.md', 'Architecture and file layout'],
@@ -84,7 +85,11 @@ architecture, performance and working recipes. Built ${new Date().toISOString().
 - **Markdown.** Obsidian has three separate readers and none can be extended
   (section 3); change their output with decorations, keys, post-processors and
   your own index.
-- **Code.** Prefer the recipes (section 7): they were written against this API
+- **Inside.** Section 4 is Obsidian's own code read: the startup order (in
+  \`onload\` the vault is empty), how plugins load, every event, setting and
+  file. Its command line (\`obsidian plugin:reload\`, \`dev:errors\`, \`eval\`,
+  \`dev:screenshot\`) lets you test a plugin in the running app yourself.
+- **Code.** Prefer the recipes (section 8): they were written against this API
   and most were run. Register everything through the plugin or a
   \`Component\`; write notes with \`vault.process\` / \`processFrontMatter\`;
   read from the metadata cache, not the files; start work at layout-ready.

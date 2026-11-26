@@ -26,7 +26,7 @@ Design Redux repo at `.claude/skills/obsidian-api/`
 | --- | --- |
 | `scripts/obsidian-api.mjs <name>` | A declaration's signature, owner, `@since`, `@deprecated` and summary. `--class Workspace` lists a class, `--since 1.13` lists what was added from a version, `--deprecated` lists everything deprecated, and `--full` prints the whole doc comment. A name it can't find is not public API. |
 | `scripts/obsidian-audit.mjs [src]` | Deprecated APIs in use, APIs newer than `minAppVersion`, risks of data loss or of breaking in a window or a version (including 1.15's runtime changes), slow patterns, and unguarded internals, each with file:line. `--stand-in tests/obsidian.js` also lists API methods a test stand-in lacks, and `--dts <path>` checks against other typings. |
-| `scripts/obsidian-source.mjs` | Obsidian's own `app.js` / `worker.js` from the same `.asar`: `--find <text or /regex/>` each place a string occurs, with context; `--regexes <text>` every regex literal containing it (`--regexes "[.)]"` prints the three list rules); `--files` the scripts. For how Obsidian really does something the API doesn't say. |
+| `scripts/obsidian-source.mjs` | Obsidian's own `app.js` / `worker.js` from the same `.asar`: `--find <text or /regex/>` each place a string occurs, with context; `--regexes <text>` every regex literal containing it (`--regexes "[.)]"` prints the three list rules); `--files` the scripts; `--inventory` every list in `references/internals.md`, found again. For how Obsidian really does something the API doesn't say. |
 | `scripts/build-handbook.mjs` | Joins this skill into one `HANDBOOK.md` that any AI can be given, and lists every public declaration of the installed `obsidian.d.ts` in `API.md` (signature, version, first sentence, deprecation). `--dts <path>`, `--out <folder>`; `API.md` needs `typescript`. |
 | `scripts/obsidian-css.mjs` | Obsidian's own `app.css`. `--vars [filter]` lists every variable and value, `--selector ".cm-line"` the rules for a selector, `--uses --file-line-width` the rules that read a variable, and `--dump` prints the file. It finds the app's `.asar` on macOS and Linux, or takes `--asar <path>`. |
 
@@ -44,6 +44,15 @@ The references:
 - `references/markdown.md`: Obsidian's three Markdown readers (editor
   drawing, editor commands, reading view and cache), what each calls a
   list, why plugins can't extend them, and the two ways that work.
+- `references/internals.md`: Obsidian's own code read:
+  - what ships, and the startup sequence;
+  - how a plugin is loaded, and the style order;
+  - the startup snapshot;
+  - the `app` object, core plugins and view types;
+  - every event, setting default, config file and database;
+  - the metadata cache and the watcher, and save timings;
+  - URIs, the command line and its developer commands;
+  - the managed policy.
 - `references/javascript.md`:
   - the Electron, Chromium, Node and V8 versions per installer;
   - which language features, Web APIs and CSS are safe;
@@ -127,6 +136,11 @@ The detail is in `references/javascript.md`.
   (`workspace.layoutReady` says if it already has). Work that needs every
   note indexed also waits for the metadata cache's `resolved` event: since
   1.15.1 the workspace shows before indexing ends.
+- **In `onload` the vault is empty.** Community plugins load before the
+  vault is listed, one at a time in `community-plugins.json`'s order, each
+  `onload` awaited; one over 3 s gets a "hanging" notice. A plugin's
+  `styles.css` is added after its `onload`. The order is in
+  `references/internals.md`.
 - These are released on unload automatically: `registerEvent`,
   `registerDomEvent`, `registerInterval`, `register(fn)`, `addCommand`,
   `registerView`, `registerEditorExtension`,
@@ -369,6 +383,29 @@ Replacing the editor's language is possible (the highest-precedence
 - `requestUrl` (no CORS limits, no abort signal), `debounce(fn, ms,
   resetTimer)`, `getLanguage()`, `requireApiVersion`, `loadMermaid()`,
   `loadPixi()` (1.15.0, untyped).
+
+## Inside Obsidian
+
+The detail is in `references/internals.md`.
+- **Style order** in `<head>`: `app.css`, then the plugins' styles, then
+  the theme, then snippets. A theme or snippet beats a plugin at equal
+  specificity.
+- **The startup snapshot (1.15.1).** The window's last visible DOM, body
+  classes and styles are shown at the next start before any plugin loads.
+- **The command line** (`obsidian`, 1.12) drives the running app. It has a
+  developer loop:
+  - `plugin:reload id=<id>`;
+  - `dev:errors` and `dev:console`;
+  - `eval code=<js>`;
+  - `dev:dom` and `dev:css selector=<css>`;
+  - `dev:screenshot path=<file>`;
+  - `dev:startup`.
+- **Debugging.** `app.debugMode(true)` keeps inline source maps, which are
+  otherwise stripped.
+- **Timings.** A note saves 2 s after typing stops, so `modify` comes then.
+  The layout and `app.json` save after 1 s.
+- **The metadata cache** is kept in IndexedDB `<appId>-cache`, by content
+  hash. Unchanged files (same mtime and size) aren't parsed again at start.
 
 ## Internals (not in the types)
 

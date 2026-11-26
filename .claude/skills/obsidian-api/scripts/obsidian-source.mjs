@@ -8,6 +8,7 @@
 //   node obsidian-source.mjs --find "/formatting-list-\w+/" a /regex/ instead of text
 //   node obsidian-source.mjs --regexes "[.)]"               every regex literal that contains the text
 //   node obsidian-source.mjs --files                        the scripts in the .asar and their sizes
+//   node obsidian-source.mjs --inventory                    the lists in references/internals.md, found again
 //
 // Options: --in app.js,worker.js (default: both)  --around 160 (characters of context)
 //          --max 20 (matches per file)  --asar <path>
@@ -105,6 +106,44 @@ console.error(`from ${asar}`);
 if (opt('--files') !== null) {
   for (const f of pack.list().filter((f) => /\.(js|mjs)$/.test(f.path)).sort((a, b) => b.size - a.size))
     console.log(`${String(Math.round(f.size / 1024)).padStart(6)} KB  ${f.path}`);
+  process.exit(0);
+}
+
+// The lists references/internals.md holds, found by strings that survive
+// minification, so they can be checked against each new version.
+if (opt('--inventory') !== null) {
+  const app = pack.read('app.js');
+  const main = pack.read('main.js');
+  const uniq = (src, re) => [...new Set([...src.matchAll(re)].map((m) => m[1]))].sort();
+  const brace = (src, at) => {                  // the {…} literal around position at
+    let a = src.lastIndexOf('{', at);
+    for (let depth = 0, j = a; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      if (src[j] === '}' && --depth === 0) return src.slice(a, j + 1);
+    }
+    return '';
+  };
+  const show = (title, items) => console.log(`\n${title} (${items.length})\n  ${items.join(' ')}`);
+  const version = (pack.list().find((f) => f.path === 'package.json') && JSON.parse(pack.read('package.json')).version) || '?';
+  console.log(`Obsidian ${version}`);
+  show('Events triggered', uniq(app, /\.trigger\("([\w:-]+)"/g));
+  show('CLI commands', uniq(app, /register(?:Cli)?Handler\("([\w:-]+)"/g));
+  const mark = /function (\w+)\(\w\)\{\w+\.push\(\{key:\w,ts:performance\.now\(\)\}\)\}/.exec(app);
+  if (mark) show('Startup marks', [...app.matchAll(new RegExp(`\\b${mark[1]}\\("([\\w.:-]+)"\\)`, 'g'))].map((m) => m[1]));
+  const hook = app.indexOf('"hook-get-address"');
+  if (hook !== -1) show('URI actions', uniq(app.slice(Math.max(0, hook - 12000), hook + 6000), /this\.register\("([\w-]+)"/g));
+  const commands = uniq(app, /id:"([a-z-]+:[a-z0-9-]+)"/g);
+  show('Command namespaces (count)', Object.entries(commands.reduce((m, id) => ((m[id.split(':')[0]] = (m[id.split(':')[0]] || 0) + 1), m), {})).map(([k, n]) => `${k}:${n}`));
+  const req = app.indexOf('"@codemirror/collab":');
+  if (req !== -1) show('What require() gives a plugin', uniq(brace(app, req), /"?([@\w/-]+)"?:/g));
+  const cfg = app.indexOf('alwaysUpdateLinks:');
+  if (cfg !== -1) console.log(`\nSettings defaults (vault.getConfig)\n  ${brace(app, cfg).replace(/!0/g, 'true').replace(/!1/g, 'false')}`);
+  show('Config files', uniq(app, /"\/?([\w-]+\.json)"/g));
+  show('Storage named appId + … (IndexedDB: -cache -backup -sync -webview; the rest localStorage)', uniq(app, /appId\+"(-[\w-]+)"/g));
+  show('Main process IPC', uniq(main, /ipcMain\.(?:on|handle)\("([\w:-]+)"/g));
+  const policy = main.indexOf('unsupported schemaVersion');
+  if (policy !== -1) show('Policy words', uniq(main.slice(Math.max(0, policy - 9000), policy), /"([a-zA-Z][\w]{3,30})"/g));
+  show('Libraries', pack.list().filter((f) => /^lib\/[^/]+(\.js|\/)/.test(f.path)).map((f) => f.path.split('/')[1]).filter((v, i, a) => a.indexOf(v) === i));
   process.exit(0);
 }
 

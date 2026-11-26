@@ -294,6 +294,12 @@ from 1.12.7. A handler returns the text to print.
 
 ## Debugging
 
+- The command line drives a running Obsidian, so builds can be checked
+  without a person: `obsidian plugin:reload id=<id>`, `obsidian
+  dev:errors`, `obsidian eval code=…`, `obsidian dev:screenshot
+  path=…`. The full list is in `references/internals.md`.
+- `app.debugMode(true)` keeps a plugin's inline source maps, which are
+  otherwise stripped.
 - DevTools: Cmd+Opt+I (macOS) or Ctrl+Shift+I. "Reload app without saving"
   is in the command palette.
 - Startup time: Settings → General → Advanced, then the stopwatch. Settings
