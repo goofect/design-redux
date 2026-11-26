@@ -18,8 +18,9 @@
 import { syntaxTree } from '@codemirror/language';
 import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view';
-import { around, depth, isMarker, LIST_ITEM } from './list-markers.js';
+import { depth } from './list-markers.js';
 import { labelOf, ORDERED, pathAt } from './numbering.js';
+import { OutlineLayout, placeCss } from './outline-layout.js';
 
 // The marker as Obsidian marks a number of its own lists: grey, set in by the live preview's inset.
 const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-formatting-list-ol' });
@@ -47,30 +48,83 @@ function ignored(state, line, indent) {
  * prefix: `width(text)` measures text in the editor's font, `tab` is how
  * many spaces a tab is.
  */
-export function itemLines(state, from, to, width, tab = 4) {
+/** A line's indent, drawn as wide as the layout says, with Obsidian's indentation guide under each item it is in. */
+export class Indent extends WidgetType {
+  constructor(width, guides) {
+    super();
+    this.width = width;
+    this.guides = guides;
+    this.key = [width].concat(guides).join('|');
+  }
+
+  eq(other) {
+    return other.key === this.key;
+  }
+
+  toDOM(view) {
+    const doc = view.dom.ownerDocument;
+    const span = doc.createElement('span');
+    span.className = 'dr-indent';
+    span.style.setProperty('--dr-x', this.width);
+    this.guides.forEach((at) => {
+      const guide = span.appendChild(doc.createElement('span'));
+      guide.className = 'dr-indent-guide';
+      guide.style.setProperty('--dr-at', at);
+    });
+    return span;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
+/**
+ * The lines between `from` and `to` of lists written as text. An item's
+ * line hangs by its marker, as Obsidian hangs its own; and every line of
+ * such a list (its items, the words under them, Obsidian's own items among
+ * them) starts under the words of the item it belongs to (outline-layout.js),
+ * its indent drawn that wide, with a guide under each item it is in where
+ * `guides` says Obsidian draws them. `width(text)` measures in the editor's
+ * font; `tab` is how many spaces a tab is.
+ */
+export function itemLines(state, from, to, width, tab = 4, guides = true) {
   const out = new RangeSetBuilder();
   const doc = state.doc;
   const lines = { getLine: (i) => (i >= 0 && i < doc.lines ? doc.line(i + 1).text : '') };
+  const layout = new OutlineLayout(lines.getLine, doc.lines, width);
   for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
     const line = doc.line(n);
-    const m = LIST_ITEM.exec(line.text);
-    if (!m || ignored(state, line, m[1].length)) continue;
-    const near = isMarker(m[2], null, m[3]) ? {} : around(lines, n - 1, depth(m[1]));
-    if (!isMarker(m[2], near.sibling, m[3], near.parent)) continue;
-    // Indent levels: a tab, or a tab's width of spaces; each is Obsidian's --list-indent wide, or a tab where that is not set.
-    const levels = Math.ceil(depth(m[1]) / tab);
-    const mark = width(`${m[2]}${m[3]}${m[4]}`);
+    const ws = /^[ \t]*/.exec(line.text)[0];
+    if (!line.text.trim() || ignored(state, line, ws.length)) continue;
+    const k = layout.kind(n - 1);
+    if (layout.ours(n - 1)) {
+      const start = layout.start(n - 1);
+      const words = placeCss(layout.words(n - 1));
+      const mark = k.kind === 'typed' ? width(k.head) : 0;
+      const style = `--dr-mark: ${mark}px; padding-inline-start: ${words}; text-indent: calc(-1 * ${words})`;
+      const cls = k.kind === 'typed' ? `dr-marked-item HyperMD-list-line HyperMD-list-line-${Math.ceil(depth(ws) / tab) + 1}` : 'dr-outline-line';
+      out.add(line.from, line.from, Decoration.line({ class: cls, attributes: { style } }));
+      const marks = guides ? layout.ancestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
+      if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: new Indent(placeCss(start), marks) }));
+      if (k.kind === 'typed') out.add(line.from + ws.length, line.from + ws.length + k.head.length, PREFIX);
+      continue;
+    }
+    if (k.kind !== 'typed') continue;
+    // At the margin, or among nothing laid out: indent levels, a tab or a tab's width of spaces, each Obsidian's --list-indent wide.
+    const levels = Math.ceil(depth(ws) / tab);
+    const mark = width(k.head);
     const hang = `calc(${levels} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--list-padding-inline-start, 0px) + ${mark}px)`;
     const style = `--dr-mark: ${mark}px; --dr-hang: ${hang}; padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))`;
     // Obsidian's list line, a level a step in: its spacing, and its fold arrow placed as on its own numbered items.
     out.add(line.from, line.from, Decoration.line({ class: `dr-marked-item HyperMD-list-line HyperMD-list-line-${levels + 1}`, attributes: { style } }));
-    out.add(line.from + m[1].length, line.from + m[1].length + m[2].length + m[3].length + m[4].length, PREFIX);
+    out.add(line.from + ws.length, line.from + ws.length + k.head.length, PREFIX);
   }
   return out.finish();
 }
 
 /** The editor extension: item lines hung in what is on screen, redrawn when the text or the view moves. */
-export function listLines(measure) {
+export function listLines(measure, guides = () => true) {
   return ViewPlugin.fromClass(
     class {
       constructor(view) {
@@ -82,7 +136,7 @@ export function listLines(measure) {
       }
 
       draw(view) {
-        this.decorations = itemLines(view.state, view.viewport.from, view.viewport.to, measure(view), view.state.tabSize || 4);
+        this.decorations = itemLines(view.state, view.viewport.from, view.viewport.to, measure(view), view.state.tabSize || 4, guides());
       }
     },
     { decorations: (v) => v.decorations }

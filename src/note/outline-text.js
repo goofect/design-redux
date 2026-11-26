@@ -17,6 +17,8 @@ import { syntaxTree } from '@codemirror/language';
 import { RangeSetBuilder, StateField } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType } from '@codemirror/view';
 import { depth } from './list-markers.js';
+import { Indent } from './lists-editor.js';
+import { OutlineLayout, placeCss } from './outline-layout.js';
 
 // A list item of any kind: a dash, a number, an outline number, a letter or numeral.
 const LISTISH = /^[ \t]*(?:[-*+]|\d+(?:\.\d+)*[.)]?|[a-z]+[.)])[ \t]/i;
@@ -40,26 +42,14 @@ function groupsOf(lines) {
  * as an indent (--dr-indent levels), so no line is code. `levelOf(group,
  * i)` gives a run's level; by default its indent from the margin.
  */
-export function renderAsText(app, root, lines, sourcePath, component, levelOf = (group) => Math.round(lead(group[0]) / 4), guides = false) {
+export function renderAsText(app, root, lines, sourcePath, component, levelOf = (group) => Math.round(lead(group[0]) / 4)) {
   const doc = root.ownerDocument;
   groupsOf(lines).forEach((group, i) => {
     const part = root.appendChild(doc.createElement('div'));
     part.className = 'dr-as-text';
-    const level = Math.max(0, levelOf(group, i));
-    part.style.setProperty('--dr-indent', String(level));
-
+    part.style.setProperty('--dr-indent', String(Math.max(0, levelOf(group, i))));
     // Lines after the first carry on its paragraph, whatever their indent: Markdown never makes them code.
-    const drawn = MarkdownRenderer.render(app, [group[0].replace(/^[ \t]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
-    // In the editor, a guide a level, as Obsidian draws one on each indented line it lays out itself: after the text, so its first block keeps no margin.
-    if (guides && level) {
-      Promise.resolve(drawn).then(() => {
-        for (let k = 0; k < level; k++) {
-          const guide = part.appendChild(doc.createElement('span'));
-          guide.className = 'dr-as-text-guide';
-          guide.style.setProperty('--dr-at', String(k));
-        }
-      });
-    }
+    MarkdownRenderer.render(app, [group[0].replace(/^[ \t]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
   });
 }
 
@@ -92,26 +82,49 @@ export function codeRuns(state) {
 
 /** A run drawn as the note's text: clicking its words puts the cursor in it; a link opens. */
 class AsText extends WidgetType {
-  constructor(app, lines, path) {
+  /** `place`: { start, words (CSS), head (an item's marker as typed, or ''), mark (its width, px), guides (CSS, a place each) }. */
+  constructor(app, text, path, place) {
     super();
     this.app = app;
-    this.lines = lines;
+    this.text = text;
     this.path = path;
-    this.text = lines.join('\n');
+    this.place = place;
+    this.key = JSON.stringify([text, path, place]);
   }
 
   eq(other) {
-    return other.text === this.text && other.path === this.path;
+    return other.key === this.key;
   }
 
   toDOM(view) {
-    const root = view.dom.ownerDocument.createElement('div');
-    // Obsidian's class for rendered Markdown, so its lists and paragraphs are drawn as its own are.
+    const doc = view.dom.ownerDocument;
+    const root = doc.createElement('div');
+    // Obsidian's class for rendered Markdown, so the words are drawn as its own are.
     root.className = 'dr-as-text-block markdown-rendered';
     root.drComponent = new Component();
     root.drComponent.load();
-    const config = (k) => (typeof this.app.vault.getConfig === 'function' ? this.app.vault.getConfig(k) : undefined);
-    renderAsText(this.app, root, this.lines, this.path, root.drComponent, undefined, config('showIndentGuide') !== false);
+    // Laid out as the lines around it are: its indent as wide as the layout says, a marker held as wide as measured, the words hung after it.
+    const { start, words, head, mark, guides } = this.place;
+    const part = root.appendChild(doc.createElement('div'));
+    part.className = 'dr-as-text dr-as-text-line';
+    part.style.setProperty('--dr-mark', `${mark}px`);
+    part.style.setProperty('--dr-words', words);
+    const indent = part.appendChild(doc.createElement('span'));
+    indent.className = 'dr-indent';
+    indent.style.setProperty('--dr-x', start);
+    guides.forEach((at) => {
+      const guide = indent.appendChild(doc.createElement('span'));
+      guide.className = 'dr-indent-guide';
+      guide.style.setProperty('--dr-at', at);
+    });
+    if (head) {
+      const marker = part.appendChild(doc.createElement('span'));
+      marker.className = 'dr-list-prefix cm-formatting-list cm-formatting-list-ol';
+      marker.textContent = head;
+    }
+    const said = part.appendChild(doc.createElement('span'));
+    said.className = 'dr-as-text-words';
+    MarkdownRenderer.render(this.app, this.text.replace(/^[ \t]+/, '').slice(head.length), said, this.path, root.drComponent);
     root.addEventListener('mousedown', (e) => {
       const link = e.target.closest && e.target.closest('a.internal-link');
       if (link) {
@@ -141,22 +154,30 @@ class AsText extends WidgetType {
  * the note's path, `live(state)` whether live preview is on (source mode
  * shows the text as it is).
  */
-export function codeAsTextField(app, pathOf, live) {
+export function codeAsTextField(app, pathOf, live, widthOf, guidesOn) {
   const build = (state, runs) => {
     const out = new RangeSetBuilder();
     const doc = state.doc;
     if (live(state)) {
+      const width = widthOf();
+      const layout = new OutlineLayout((i) => (i >= 0 && i < doc.lines ? doc.line(i + 1).text : ''), doc.lines, width);
       runs.forEach(({ from, to }) => {
         // A line at a time, as live preview shows the rest of a note: the line the cursor is on as typed, the others as text.
         for (let n = from; n <= to; n++) {
           const line = doc.line(n);
           if (!line.text.trim()) continue;
+          const start = placeCss(layout.start(n - 1));
+          const ws = /^[ \t]*/.exec(line.text)[0];
+          const guides = guidesOn() ? layout.ancestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
           if (state.selection.ranges.some((r) => r.from <= line.to && r.to >= line.from)) {
-            // Hung by its indent, as Obsidian hangs an indented line: a long line wraps under its words, not at the margin.
-            const hang = `calc(${Math.round(lead(line.text) / 4)} * var(--list-indent))`;
-            out.add(line.from, line.from, Decoration.line({ class: 'dr-as-text-raw', attributes: { style: `padding-inline-start: ${hang}; text-indent: calc(-1 * ${hang})` } }));
+            // As typed, where the line starts in the layout, a long line hung there: it wraps under its words, not at the margin.
+            out.add(line.from, line.from, Decoration.line({ class: 'dr-as-text-raw', attributes: { style: `padding-inline-start: ${start}; text-indent: calc(-1 * ${start})` } }));
+            if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: new Indent(start, guides) }));
           } else {
-            out.add(line.from, line.to, Decoration.replace({ widget: new AsText(app, [line.text], pathOf(state)), block: true }));
+            const k = layout.kind(n - 1);
+            const head = k.kind === 'typed' ? k.head : '';
+            const place = { start, words: placeCss(layout.words(n - 1)), head, mark: head ? width(head) : 0, guides };
+            out.add(line.from, line.to, Decoration.replace({ widget: new AsText(app, line.text, pathOf(state), place), block: true }));
           }
         }
       });

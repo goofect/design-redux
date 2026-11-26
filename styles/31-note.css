@@ -89,6 +89,23 @@
   --dr-mark: 0px; /* measured by the script, in the line's style */
 }
 
+/* A line of a list written as text, its indent drawn as wide as the layout says (outline-layout.js): it starts under the words of the
+   item it belongs to. A guide under each item it is in, where and as Obsidian draws its own indentation guides. */
+.dr-indent {
+  --dr-x: 0px; /* the indent's width, set by the script */
+  display: inline-block;
+  width: var(--dr-x);
+}
+
+.dr-indent-guide {
+  --dr-at: 0px; /* where the item it stands for starts, set by the script */
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: calc(var(--dr-at) + var(--indentation-guide-editing-indent));
+  border-inline-end: var(--indentation-guide-width) solid var(--indentation-guide-color);
+}
+
 .dr-list-prefix {
   display: inline-block;
   font-variant-numeric: normal; /* Obsidian's class sets figures one width, which no canvas measures: the figures as measured */
@@ -150,23 +167,13 @@
   padding-inline-start: calc(var(--dr-indent) * var(--list-indent));
 }
 
-/* In the editor, Obsidian's indentation guide at each level, where and as it draws its own on an indented line. */
-.dr-as-text-guide {
-  --dr-at: 0; /* the guide's level, set by the script */
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  inset-inline-start: calc(var(--dr-at) * var(--list-indent) + var(--indentation-guide-editing-indent));
-  border-inline-end: var(--indentation-guide-width) solid var(--indentation-guide-color);
-}
 
 /* The runs as the blank lines between them part them: no paragraph's own margin inside a run, one paragraph's space between runs. */
 .dr-as-text > :first-child {
   margin-block-start: 0;
 }
 
-.dr-as-text > :last-child,
-.dr-as-text > :has(+ .dr-as-text-guide) {
+.dr-as-text > :last-child {
   margin-block-end: 0;
 }
 
@@ -176,6 +183,18 @@
 
 .dr-as-text .dr-marked-list {
   margin-block: 0;
+}
+
+/* In the editor, a line drawn as text: hung where its words start, which run on after its marker, as on a line Obsidian draws. */
+.dr-as-text-line {
+  --dr-words: 0px; /* where its words start, set by the script */
+  padding-inline-start: var(--dr-words);
+  text-indent: calc(-1 * var(--dr-words));
+}
+
+.dr-as-text-words > p {
+  display: inline;
+  margin: 0;
 }
 
 .dr-as-text-raw {

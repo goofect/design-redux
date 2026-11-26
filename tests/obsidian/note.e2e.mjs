@@ -353,6 +353,49 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(await readUntil(value, (t) => t.indexOf('four') < t.indexOf('one'))).toBe('3. Top\n\t3.1. four\n\t3.2. one\n\tthree\n\t3.3. five\n');
   });
 
+  it('lays a list written as text out under the words: every line under an item, drawn by Obsidian or as text, starts where that item\'s words do', async function () {
+    const text = '3. [[Responsible]]\n\ti. **SumA**\n\tWords A.\n\n\tii. **FunA**\n\n\t3.1. [[Accountability]]\n\t\ti. **SumB**\n\t\tWords B.\n\n\t\tii. **InternalB**\n\n\t\tiii. **UpstreamB**\n\t\tWords C.\n\n\t\t3.1.1. [[Oversight]]\n\t\t\ti. **SumC**\n\t\t\tWords D.\n';
+    await browser.executeObsidian(async ({ app }, text) => {
+      const file = await app.vault.create(`Politics/Laid out ${Date.now()}.md`, text);
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
+      // On a blank line, so every line around shows as it reads, its link's brackets hidden.
+      app.workspace.activeEditor.editor.setCursor({ line: 3, ch: 0 });
+    }, text);
+    const measure = () => browser.execute(() => {
+      const root = document.querySelector('.workspace-leaf.mod-active .cm-content');
+      const nodes = () => {
+        const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const out = [];
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) out.push(n);
+        return out;
+      };
+      const leftAt = (node, i) => { const r = document.createRange(); r.setStart(node, i); r.setEnd(node, i + 1); return r.getBoundingClientRect().left; };
+      const words = (s) => { const n = nodes().find((t) => t.data.includes(s)); return n ? leftAt(n, n.data.indexOf(s)) : null; };
+      // Where a line's first character is drawn: its number, or its first word.
+      const first = (s) => {
+        const line = Array.from(root.querySelectorAll('.cm-line, .dr-as-text-line')).find((l) => l.textContent.includes(s));
+        if (!line) return null;
+        const walk = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+          const i = n.data.search(/\S/);
+          if (i >= 0) return leftAt(n, i);
+        }
+        return null;
+      };
+      const under = (parent, kids) => kids.map((k) => [k, Math.round((first(k) - words(parent)) * 10) / 10]);
+      return {
+        three: under('Responsible', ['SumA', 'Words A', 'FunA', 'Accountability']),
+        threeOne: under('Accountability', ['SumB', 'Words B', 'InternalB', 'UpstreamB', 'Words C', 'Oversight']),
+        threeOneOne: under('Oversight', ['SumC', 'Words D']),
+      };
+    });
+    const got = await readUntil(measure, (v) => v.threeOneOne.every(([, d]) => !Number.isNaN(d)));
+    // Under Obsidian's own "3.", within its figures' widths (Obsidian sets them one width, which no canvas measures); under these, to a pixel.
+    got.three.forEach(([k, d]) => expect([k, Math.abs(d) <= 3]).toEqual([k, true]));
+    got.threeOne.concat(got.threeOneOne).forEach(([k, d]) => expect([k, Math.abs(d) <= 1]).toEqual([k, true]));
+    await shot('laid-out');
+  });
+
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {
     // A note of its own each try, so a second try starts where the first did.
     const path = await browser.executeObsidian(async ({ app }) => {

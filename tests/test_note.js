@@ -446,18 +446,29 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([prose.textContent, prose.childNodes.length, one.textContent, one.childNodes.length], ['Mr. Smith\nDr. Who', 1, 'Intro\na. only one', 1], 'words with full stops, or a lone item, are no list');
   });
 
-  await check('lists in the editor: an item line hangs by its indent levels and its marker, the marker held in a span as wide; prose is left be', () => {
-    const doc = 'a. one\n\ti) sub\nMr. Smith\nplain';
-    const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
-    const got = [];
-    for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class, (it.value.spec.attributes || {}).style]);
+  await check('lists in the editor: an item line hangs by its marker, held in a span as wide; a line under an item starts under its words, its indent drawn that wide with a guide under each item it is in; prose and Obsidian\'s own lists are left be', () => {
+    const at = (px, insets, indents = 0) => `calc(${px}px + ${insets} * var(--list-padding-inline-start, 0px) + ${indents} * var(--list-indent))`;
+    const draw = (doc) => {
+      const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
+      const got = [];
+      for (let it = set.iter(); it.value; it.next()) {
+        const spec = it.value.spec;
+        got.push(spec.widget ? [it.from, it.to, 'indent', spec.widget.width, spec.widget.guides] : [it.from, it.to, spec.class, (spec.attributes || {}).style]);
+      }
+      return got;
+    };
     const prefix = 'dr-list-prefix cm-formatting-list cm-formatting-list-ol';
-    assert.deepStrictEqual(got, [
+    assert.deepStrictEqual(draw('a. one\n\ti) sub\n\twords\nMr. Smith\nplain'), [
       [0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1', '--dr-mark: 30px; --dr-hang: calc(0 * var(--list-indent, 40px) + var(--list-padding-inline-start, 0px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
       [0, 3, prefix, undefined],
-      [7, 7, 'dr-marked-item HyperMD-list-line HyperMD-list-line-2', '--dr-mark: 30px; --dr-hang: calc(1 * var(--list-indent, 40px) + var(--list-padding-inline-start, 0px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
+      // Under "a. ": its number stands where a.'s words start (its box an inset earlier, the inset being inside it), a guide under a.
+      [7, 7, 'dr-marked-item HyperMD-list-line HyperMD-list-line-2', `--dr-mark: 30px; padding-inline-start: ${at(60, 1)}; text-indent: calc(-1 * ${at(60, 1)})`],
+      [7, 8, 'indent', at(30, 0), [at(0, 0)]],
       [8, 11, prefix, undefined],
+      [15, 15, 'dr-outline-line', `--dr-mark: 0px; padding-inline-start: ${at(30, 1)}; text-indent: calc(-1 * ${at(30, 1)})`],
+      [15, 16, 'indent', at(30, 1), [at(0, 0)]],
     ]);
+    assert.deepStrictEqual(draw('1. one\n\t1. two\n\twords'), [], 'a list of Obsidian\'s own was laid out by the plugin');
   });
 
   await check('an outline written as text (1.1., 1.2.1.) drawn as a list, nested by its numbers where there is no source; "1.1" without its stop only where it follows the item above; prose left be', async () => {

@@ -54,7 +54,10 @@ export class MarkedLists extends Feature {
       const info = editorInfoField ? state.field(editorInfoField, false) : null;
       return (info && info.file && info.file.path) || '';
     };
-    this.useEditor(listLines(measure), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live));
+    // Obsidian's indentation guides, where its setting has them on; the editor's measure, kept for the part that has no view.
+    const guides = () => typeof this.app.vault.getConfig !== 'function' || this.app.vault.getConfig('showIndentGuide') !== false;
+    const measured = (view) => (this.width = measure(view));
+    this.useEditor(listLines(measured, guides), numberLines(numberingOf, live, measure), codeAsTextField(this.app, pathOf, live, () => this.width || ((t) => t.length * 8), guides));
     // A note's numbering changed: its editors and reading views drawn again.
     this.known = new Map();
     this.listen(this.app.metadataCache, 'changed', (file) => {
