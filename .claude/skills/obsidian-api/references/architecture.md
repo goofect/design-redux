@@ -95,16 +95,17 @@ Rules that keep it in shape, all checkable in CI:
 
 ## Build and tooling
 
-- **esbuild**, `format: 'cjs'`, `target: 'es2021'`, `bundle: true`,
-  `treeShaking: true`, minified for release, inline source maps in
-  development.
+- **esbuild**, `format: 'cjs'`, `bundle: true`, `treeShaking: true`,
+  minified for release, inline source maps in development. The target is
+  `chrome138` (the oldest installer still in use), not the sample's
+  `es2021`. The config and reasons are in `references/javascript.md`.
 - **External** (provided by Obsidian, never bundled): `obsidian`,
   `electron`, `@codemirror/autocomplete`, `collab`, `commands`, `language`,
   `lint`, `search`, `state`, `view`, `@lezer/common`, `highlight`, `lr`, and
   Node's built-in modules. Bundling a second copy of `@codemirror/state`
   breaks editor extensions at runtime.
-- **eslint-plugin-obsidianmd** catches API misuse (and the review rules) at
-  edit time.
+- **eslint-plugin-obsidianmd** catches API misuse at edit time. Since 0.5,
+  its typed rules also run on plain JavaScript with a `jsconfig.json`.
 - A UI framework (Preact, Svelte, React) pays for itself in large stateful
   views (boards, editors); mount it in `onOpen` and unmount in `onClose`, or
   it leaks. For lists and forms, `createEl` is smaller and faster.
@@ -115,7 +116,9 @@ Rules that keep it in shape, all checkable in CI:
   `obsidian` module that implements only what they call. Vitest or Jest.
 - **End to end:** the real app with WebdriverIO and `wdio-obsidian-service`
   (Templater, QuickAdd), for anything that depends on Obsidian's DOM, the
-  editor or styles. Run on the oldest supported version and the latest.
+  editor or styles. Run on the oldest supported version and the latest:
+  wdio-obsidian-service 3.5.0 takes `installerVersion: 'earliest'` and
+  `'latest'`, which cover Chromium 138 and 150.
 - **Performance:** a generated vault of a few thousand notes in the e2e
   suite, with startup and a typical command timed against a budget.
 

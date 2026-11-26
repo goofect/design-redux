@@ -94,6 +94,13 @@ const RISKS = [
   [/(?:^|[^.\w])instanceof\s+(HTMLElement|Element|Node|MouseEvent|KeyboardEvent)\b/, 'instanceof fails across windows: x.instanceOf(HTMLElement)'],
   [/\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML\(/, 'HTML from a string can run a note\'s content as markup: createEl'],
   [/\bsetInterval\(/, 'an interval outlives the plugin unless wrapped in registerInterval()'],
+  // 1.15 runtime changes, not yet in the typings
+  [/^(?!.*classList\.contains\().*\.contains\(\s*['"`\d[]/, 'Array#contains / String#contains are deprecated (1.15.1): includes()'],
+  [/\bactiveWindow\.(setTimeout|setInterval)\(/, 'a timer on a popout window never fires once it closes (1.15.1): window.setTimeout / setInterval'],
+  [/\bPIXI\b/, 'PIXI loads with the first graph since 1.15.0: await loadPixi() before using it, guarded'],
+  [/^\s*(await\s+)?[\w.]*\.trashFile\(/, 'trashFile resolves false when it could not trash (1.15.1): check the result'],
+  [/\.name\s*===?\s*['"`][^'"`]*formatting/, 'syntax-tree names gained formatting-*-end (1.15.0): match a segment of name.split("_"), not the whole name'],
+  [/\bmermaid\b/i, 'Mermaid is drawn by Pele since 1.15.0: its class names are gone, only initialize/render/parse/mermaidAPI remain'],
 ];
 const SLOW = [
   [/\.(getMarkdownFiles|getFiles|getAllLoadedFiles|getAllFolders)\(\)/, 'walks the whole vault: fine once, slow in an event handler or a render'],

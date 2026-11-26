@@ -60,7 +60,8 @@ These agree with the architecture and performance references:
 ### A better file browser is the most wanted thing in Obsidian
 
 *Notebook Navigator* became the most popular plugin in the community
-directory in August 2026, approaching a million downloads. It is "a better
+directory in August 2026, approaching a million downloads (by dsebastien's
+count; a vendor case study by the author says 700,000). It is "a better
 file browser and calendar inspired by Apple Notes, Bear, Evernote and Day
 One": a folder tree, a list pane of notes, notes from subfolders merged into
 one list, search over aliases and all properties, tags, a calendar for
@@ -73,6 +74,12 @@ What users say about it on the forum:
   Obsidian's tag popup;
 - the settings are many and the interface dense for minimalists;
 - it handles large vaults well, and replaces several other plugins.
+
+How it stays fast:
+- a cache in IndexedDB, mirrored in memory for synchronous reads;
+- lists virtualised with TanStack Virtual;
+- a batched, debounced pipeline that can be cancelled, for previews;
+- by its own claim, 100,000+ notes.
 
 For a library or explorer plugin, that sets the bar: speed on a large
 vault, one place to browse instead of two, tags and properties as ways in,

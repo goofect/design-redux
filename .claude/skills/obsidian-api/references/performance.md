@@ -17,6 +17,12 @@ end).
   their views at startup. Draw a view when its `onOpen()` runs.
 - Vault `create` fires once per file while the vault loads. Subscribe inside
   `onLayoutReady`, or check `this.app.workspace.layoutReady`.
+- Obsidian's own heavy parts load late since 1.15.0: `PIXI` arrives with the
+  first graph (`loadPixi()`), and Mermaid diagrams are drawn by Pele, which
+  Obsidian says renders up to 500 times faster.
+- Since 1.15.1 the workspace appears before indexing ends, with progress in
+  the status bar. Work that needs the metadata cache waits for its
+  `resolved` event, not only for layout-ready.
 - Import heavy code (a 3D library, a parser) only when it's first used, or
   build it into the bundle once; never `require` it at load if few people
   use the feature.
@@ -62,9 +68,12 @@ end).
   it, then append it. Appending rows one by one to a visible element forces
   a layout per row.
 - Long lists (thousands of rows) draw only what is visible: a fixed row
-  height, a spacer for the rest, and an `IntersectionObserver` or a
-  `scroll` handler that redraws the window of rows. Obsidian's own file
-  explorer does the same.
+  height, a spacer for the rest, and a `scroll` handler that redraws the
+  window of rows once per frame (recipe 20). Obsidian's own file explorer
+  does the same.
+- Long work in the main thread runs in slices of about 8 ms, with
+  `scheduler.yield()` between them (recipe 19), so typing never waits.
+  Parsing that needs no `app` can go to a worker (recipe 17).
 - Read layout, then write: measuring (`offsetHeight`,
   `getBoundingClientRect`) after changing styles in the same frame forces a
   synchronous layout each time.
@@ -132,6 +141,11 @@ end).
   `TFile` objects, in long-lived structures.
 - Associate data with DOM elements in a `WeakMap`, so it goes when the
   element does.
+- Timers that must outlive a popout go on the main `window`: one set on a
+  popout's window never fires once it closes (1.15.1).
+- Known leaks in Obsidian itself, fixed in 1.13.6 (Live Preview table
+  reordering) and 1.14.4 (the metadata cache with external files). Hunt
+  your own leaks on 1.14.4 or later.
 
 ## Measuring
 
@@ -141,5 +155,11 @@ end).
 - Around a suspect: `const t = performance.now(); …; console.debug('index', performance.now() - t)`.
 - Startup: compare app reload time with the plugin on and off, on a large
   vault, a few times each.
+- `performance.mark('x:start')` / `performance.measure('x', 'x:start')`
+  put a labelled span in the Timings track of a recording.
+- Know the runtime you measure: `process.versions.chrome` in the console.
+  The Electron 43 installers (1.13 and later) have V8's profile-guided
+  builtins and bytecode caching, so an old installer is slower for reasons
+  that aren't the plugin's.
 - Test with a vault big enough to show it: a few thousand notes and a note of
   several thousand lines.
