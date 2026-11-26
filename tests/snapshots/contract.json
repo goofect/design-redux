@@ -30,6 +30,8 @@
     "make-outline-list",
     "make-roman-numeral-list",
     "merge-properties",
+    "move-list-item-down",
+    "move-list-item-up",
     "new-folder-here",
     "new-note-here",
     "next-in-album",

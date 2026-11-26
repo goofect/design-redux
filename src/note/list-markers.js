@@ -65,6 +65,8 @@ export function around(editor, at, deep) {
     if (!line.trim()) continue;
     const m = ANY_ITEM.exec(line);
     const d = depth(/^[ \t]*/.exec(line)[0]);
+    // An indented line of words is more of an item above it (its summary, its paragraph): read on past it. Words at the margin end the list.
+    if (!m && d > 0 && d <= deep) continue;
     if (d < deep) return { sibling: null, parent: m ? m[2].replace(/[.)]$/, '') : null };
     if (d === deep) {
       if (!m) return { sibling: null, parent: null };
@@ -132,7 +134,20 @@ export function isMarker(marker, sibling, stop = '.', parent = null) {
 // An item as renumbering reads it: a plain number, an outline number or a letter or numeral, and its stop.
 const ENTRY = /^([ \t]*)(\d+(?:\.\d+)*|[a-z]+)([.)]?)[ \t]/i;
 
-function entryOf(line) {
+/**
+ * Whether a blank line at `i` is inside a list: what comes after it, past
+ * blank lines, is indented (more of an item, or an item under one), as in
+ * a list whose items are parted by blank lines.
+ */
+function blankWithin(lineOf, count, i) {
+  for (let k = i + 1; k < count; k++) {
+    const line = lineOf(k);
+    if (line.trim()) return /^[ \t]/.test(line);
+  }
+  return false;
+}
+
+export function entryOf(line) {
   const m = ENTRY.exec(line);
   if (!m) return null;
   const [, indent, marker, stop] = m;
@@ -148,7 +163,10 @@ function renumberOutline(lineOf, count, at, first) {
   let written = first.marker;
   for (let i = at + 1; i < count; i++) {
     const line = lineOf(i);
-    if (!line.trim()) break;
+    if (!line.trim()) {
+      if (blankWithin(lineOf, count, i)) continue;
+      break;
+    }
     const e = entryOf(line);
     // A line with no number is more of the item above where it is indented (words, a lettered list under it), the list's end where it isn't.
     if (!e || e.kind === 'letter') {
@@ -176,7 +194,10 @@ function renumberLetters(lineOf, count, at, first) {
   let written = first.marker;
   for (let i = at + 1; i < count; i++) {
     const line = lineOf(i);
-    if (!line.trim()) break;
+    if (!line.trim()) {
+      if (blankWithin(lineOf, count, i)) continue;
+      break;
+    }
     const deep = depth(/^[ \t]*/.exec(line)[0]);
     if (deep > d) continue;
     if (deep < d) break;
@@ -189,6 +210,57 @@ function renumberLetters(lineOf, count, at, first) {
     prev = next;
   }
   return changes;
+}
+
+/**
+ * Where the lists around line `n` start, to count them on from there after
+ * a change: the outline's first item (a plain number at the margin, or the
+ * first outline number above), and the first letter or numeral beside the
+ * one at `n`. Read upward through the list, blank lines within it
+ * included, at most `reach` lines. Line numbers from 0; none, an empty list.
+ */
+export function listStarts(lineOf, count, n, reach = 400) {
+  const lead = (line) => depth(/^[ \t]*/.exec(line)[0]);
+  const up = function* () {
+    for (let i = Math.min(n, count - 1); i >= 0 && n - i <= reach; i--) {
+      const line = lineOf(i);
+      if (!line.trim()) {
+        if (blankWithin(lineOf, count, i)) continue;
+        return;
+      }
+      yield i;
+    }
+  };
+  const starts = [];
+  // The outline: up to a number at the margin, or the last outline number before words at the margin.
+  let outline = -1;
+  for (const i of up()) {
+    const e = entryOf(lineOf(i));
+    const d = lead(lineOf(i));
+    if (e && e.kind !== 'letter') {
+      outline = i;
+      if (!d) break;
+    } else if (!d) break;
+  }
+  if (outline >= 0) starts.push(outline);
+  // The letters: the first item at the depth of the nearest letter at or above `n`.
+  let deep = -1;
+  let letter = -1;
+  for (const i of up()) {
+    const line = lineOf(i);
+    const e = entryOf(line);
+    const d = lead(line);
+    if (deep < 0) {
+      if (!e) continue;
+      if (e.kind !== 'letter') break;
+      deep = d;
+    }
+    if (d > deep) continue;
+    if (d < deep || !e || e.kind !== 'letter') break;
+    letter = i;
+  }
+  if (letter >= 0) starts.push(letter);
+  return starts;
 }
 
 /**

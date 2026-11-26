@@ -400,6 +400,48 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.plugin.notes.get(w.file('A.md'), 'numbering'), 'a i');
   });
 
+  await check('typing in a list written as text, as in Obsidian\'s own: Enter splits an item, Backspace after a marker takes it away, Tab on several items, an item moved with what is under it, and the numbers count on after a line goes', async () => {
+    const w = await world({ 'A.md': '' });
+    const lists = feature(w, 'MarkedLists');
+    const edit = lists.editing;
+    const split = editor('1.1. one two\n1.2. three', { line: 0, ch: 8 });
+    assert.ok(edit.carryOn(split));
+    assert.strictEqual(split.text, '1.1. one\n1.2. two\n1.3. three', 'Enter within an item does not split it');
+    assert.deepStrictEqual(split.getCursor(), { line: 1, ch: 5 });
+    const back = editor('1. Intro\n\t1.1. a\n\t1.2. b\n\t1.3. c', { line: 2, ch: 6 });
+    assert.ok(edit.unmark(back));
+    assert.strictEqual(back.text, '1. Intro\n\t1.1. a\n\tb\n\t1.2. c', 'Backspace after the marker does not take it away, or the list does not count on');
+    const first = editor('\t1.1. a\n\t1.2. b', { line: 0, ch: 6 });
+    assert.ok(edit.unmark(first));
+    assert.strictEqual(first.text, '\ta\n\t1.1. b', 'the next item does not take the first one\'s marker');
+    assert.ok(!edit.unmark(editor('1.1. a', { line: 0, ch: 3 })), 'Backspace inside the marker is taken');
+    const several = editor('a. x\nb. y\nc. z');
+    several.select({ line: 1, ch: 0 }, { line: 2, ch: 4 });
+    assert.ok(edit.indent(several));
+    assert.strictEqual(several.text, 'a. x\n\ti. y\n\tii. z');
+    assert.strictEqual(several.changes.length, 1, 'Tab on several items is not one Undo');
+    const moving = editor('1. Top\n\t1.1. a\n\t\t1.1.1. deep\n\n\t1.2. b', { line: 4, ch: 7 });
+    assert.ok(edit.move(moving, -1));
+    assert.strictEqual(moving.text, '1. Top\n\t1.1. b\n\n\t1.2. a\n\t\t1.2.1. deep', 'the item did not move with what is under it, or the numbers did not follow');
+    assert.ok(edit.move(moving, 1));
+    assert.strictEqual(moving.text, '1. Top\n\t1.1. a\n\t\t1.1.1. deep\n\n\t1.2. b');
+    assert.ok(!edit.move(editor('1.1. only', { line: 0, ch: 2 }), -1), 'the first item moved up');
+    // Words under an item, at its indent, are more of it: the list goes on past them.
+    const worded = editor('3. Top\n\ti. **Summary**\n\tWords.\n\tii. **Function**', { line: 3, ch: 17 });
+    assert.ok(edit.carryOn(worded));
+    assert.strictEqual(worded.text, '3. Top\n\ti. **Summary**\n\tWords.\n\tii. **Function**\n\tiii. ', 'the list stopped at the words under an item');
+    // A line taken away (deleted, cut, moved): the numbers after it count on in the same change; Obsidian's own lists are left to it.
+    const gone = (doc, line) => {
+      const state = EditorState.create({ doc, extensions: [dr.countOn(() => false)] });
+      const l = state.doc.line(line);
+      return state.update({ changes: { from: l.from, to: Math.min(l.to + 1, state.doc.length) }, userEvent: 'delete' }).state.doc.toString();
+    };
+    assert.strictEqual(gone('1. Top\n\t1.1. a\n\t1.2. b\n\t1.3. c', 3), '1. Top\n\t1.1. a\n\t1.2. c');
+    assert.strictEqual(gone('3. Top\n\t3.1. a\n\n\t\ti. words\n\n\t3.2. b\n\n\t3.3. c', 6), '3. Top\n\t3.1. a\n\n\t\ti. words\n\n\n\t3.2. c', 'the numbers do not count on past blank lines in the list');
+    assert.strictEqual(gone('a. x\nb. y\nc. z', 2), 'a. x\nb. z');
+    assert.strictEqual(gone('1. a\n2. b\n3. c', 2), '1. a\n3. c', 'Obsidian\'s own list was counted on by the plugin');
+  });
+
   await check('lists in reading view: the items made a list in place, nested by the source, links moved not copied, prose left be', async () => {
     const w = await world({ 'A.md': '' });
     const lists = feature(w, 'MarkedLists');

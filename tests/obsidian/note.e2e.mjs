@@ -344,6 +344,38 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('as-text-reading');
   });
 
+  it('types in a list written as text as in Obsidian\'s own: Enter splits, Backspace after a marker takes it away, Tab on several items, a deleted line counts the rest on, an item moves with what is under it', async function () {
+    const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
+    const at = (line, ch) => browser.executeObsidian(({ app }, line, ch) => { const e = app.workspace.activeEditor.editor; e.focus(); e.setCursor({ line, ch }); }, line, ch);
+    await browser.executeObsidian(async ({ app }) => {
+      const file = await app.vault.create(`Politics/Typing ${Date.now()}.md`, '3. Top\n\t3.1. one two\n\t3.2. three\n\t3.3. four\n');
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
+    });
+    // Enter within an item's words: split there.
+    await at(1, 9);
+    await browser.keys(['Enter']);
+    expect(await readUntil(value, (t) => t.includes('3.2. two'))).toBe('3. Top\n\t3.1. one\n\t3.2. two\n\t3.3. three\n\t3.4. four\n');
+    // Backspace just after a marker: it goes, and the rest count on.
+    await at(3, 6);
+    await browser.keys(['Backspace']);
+    expect(await readUntil(value, (t) => t.includes('\tthree'))).toBe('3. Top\n\t3.1. one\n\t3.2. two\n\tthree\n\t3.3. four\n');
+    // A line deleted: the rest count on.
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.replaceRange('', { line: 2, ch: 0 }, { line: 3, ch: 0 }));
+    expect(await readUntil(value, (t) => !t.includes('two'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n');
+    // Tab with two items selected: both a level in, under the item above them (past its words); Shift-Tab, back out.
+    await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.replaceRange('\t3.3. five\n', { line: 4, ch: 0 }); });
+    await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.focus(); e.setSelection({ line: 3, ch: 0 }, { line: 4, ch: 10 }); });
+    await browser.keys(['Tab']);
+    expect(await readUntil(value, (t) => t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t\t3.1.1. four\n\t\t3.1.2. five\n');
+    await browser.keys(['Shift', 'Tab']);
+    await browser.keys(['Shift']);
+    expect(await readUntil(value, (t) => !t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n\t3.3. five\n');
+    // An item moved up with what is under it, from the palette's command.
+    await at(3, 8);
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:move-list-item-up'));
+    expect(await readUntil(value, (t) => t.indexOf('four') < t.indexOf('one'))).toBe('3. Top\n\t3.1. four\n\t3.2. one\n\tthree\n\t3.3. five\n');
+  });
+
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {
     // A note of its own each try, so a second try starts where the first did.
     const path = await browser.executeObsidian(async ({ app }) => {
