@@ -205,7 +205,7 @@ export function ledgerKeys(plugin, file) {
 
 /** One property's row: edited where it stands, a menu of its own, red where its folder's schema says it is wrong. */
 export function ledgerRow(plugin, host, file, key, value, redraw) {
-  const wrong = plugin.checkValue ? plugin.checkValue(file, key, value) : null;
+  const wrong = plugin.notes.check(file, key, value);
   const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => selecting(node) || editValue(plugin, node, file, key, value, redraw) });
   node.dataset.key = key;
   // A link in the value is a link: pressed, or Enter on it, it opens what it links to (with Cmd, in a new tab); the
@@ -270,7 +270,7 @@ function selecting(node) {
 
 /** The values offered while a property is typed: those its folder's schema allows, else those used across the vault. */
 export function valueWords(plugin, file, key) {
-  const allowed = plugin.allowedValues ? plugin.allowedValues(file, key) : null;
+  const allowed = plugin.notes.allowed(file, key);
   return (allowed || plugin.index.values(key).map(([v]) => v)).map((text) => ({ text, shown: valueShown(text) }));
 }
 

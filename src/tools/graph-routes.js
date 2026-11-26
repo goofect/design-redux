@@ -61,7 +61,7 @@ export class GraphRoutes extends Feature {
 
   enable() {
     const apply = () => this.apply();
-    ['layout-change', 'design-redux:links', 'design-redux:settings'].forEach((name) => this.listen(this.app.workspace, name, apply));
+    this.listen(this.app.workspace, ['layout-change', 'design-redux:links', 'design-redux:settings'], apply);
     this.add(() => this.apply(true));
     this.apply();
   }

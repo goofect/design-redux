@@ -81,7 +81,7 @@ export class DesignRedux extends Plugin {
   currentFolder() {
     const picked = this.selection.item;
     if (picked instanceof TFolder) return picked;
-    if (this.openFolder instanceof TFolder && this.app.vault.getAbstractFileByPath(this.openFolder.path)) return this.openFolder;
+    if (this.selection.folder) return this.selection.folder;
     const file = this.app.workspace.getActiveFile();
     return file && file.parent ? file.parent : null;
   }

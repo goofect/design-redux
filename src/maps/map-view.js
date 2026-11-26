@@ -187,14 +187,13 @@ class RetiredView extends ItemView {
 
 export class Maps extends Feature {
   register() {
-    this.plugin.registerView(MAP_VIEW, (leaf) => new MapView(leaf, this.plugin));
+    this.registerView(MAP_VIEW, (leaf) => new MapView(leaf, this.plugin));
     RETIRED_VIEWS.forEach((type) => this.plugin.registerView(type, (leaf) => new RetiredView(leaf, type)));
   }
 
   enable() {
     const ws = this.app.workspace;
     this.listen(ws, 'design-redux:vault', () => ws.getLeavesOfType(MAP_VIEW).forEach((l) => l.view && l.view.root && l.view.schedule()));
-    this.add(() => !this.plugin.unloading && ws.detachLeavesOfType(MAP_VIEW));
   }
 
   async open(entry) {

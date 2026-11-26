@@ -12,6 +12,9 @@ export const LIBRARY_VIEW = 'design-redux-library';
 export const BROWSE_VIEW = 'design-redux-browse';
 
 /** What both views share: a screen that is drawn on open and known to the plugin while it is. */
+/** The library's screens open now, in every pane: the library redraws them all. */
+export const openScreens = new Set();
+
 class ScreenView extends ItemView {
   constructor(leaf, plugin) {
     super(leaf);
@@ -20,12 +23,12 @@ class ScreenView extends ItemView {
 
   async onOpen() {
     this.screen = this.makeScreen();
-    (this.plugin.screens || (this.plugin.screens = new Set())).add(this.screen);
+    openScreens.add(this.screen);
     this.screen.draw();
   }
 
   async onClose() {
-    if (this.plugin.screens) this.plugin.screens.delete(this.screen);
+    openScreens.delete(this.screen);
     this.screen = null;
   }
 }
@@ -49,8 +52,8 @@ export class BrowseView extends ScreenView {
     return new LibraryScreen(this.plugin, this.contentEl, {
       wide: true,
       onGo: (folder) => {
-        this.plugin.openFolder = folder.path === '/' ? null : folder;
-        (this.plugin.screens || []).forEach((s) => s !== this.screen && s.refresh());
+        this.plugin.selection.folder = folder;
+        openScreens.forEach((s) => s !== this.screen && s.refresh());
       },
     });
   }
@@ -68,8 +71,8 @@ export class BrowseView extends ScreenView {
   }
 
   async onClose() {
-    this.plugin.openFolder = null;
-    (this.plugin.screens || []).forEach((s) => s !== this.screen && s.refresh());
+    this.plugin.selection.folder = null;
+    openScreens.forEach((s) => s !== this.screen && s.refresh());
     await super.onClose();
   }
 }

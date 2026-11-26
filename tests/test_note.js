@@ -137,7 +137,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     await w.plugin.saveSettings();
     view.contentEl.querySelector('.dr-note-folder').click();
     await settle();
-    assert.strictEqual(w.plugin.openFolder.path, 'Logic');
+    assert.strictEqual(w.plugin.selection.folder.path, 'Logic');
   });
 
   await check('the ledger: values keep their kind, one Undo a change; a property added by its command (a name, or name: value), copied and pasted as text is, and removed by its menu; the panel gone, its view and commands kept quiet', async () => {

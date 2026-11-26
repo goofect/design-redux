@@ -11,30 +11,25 @@ import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { neighbours } from './order.js';
 import { NoteSwipe } from './swipe.js';
-import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
+import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView, openScreens } from './views.js';
 
 /** Is an element on screen: Obsidian's own isShown() where there is one, else whether it has a box. */
 const shown = (el) => !!el && (typeof el.isShown === 'function' ? el.isShown() : !!el.offsetParent);
 
 export class Library extends Feature {
   register() {
-    this.plugin.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this.plugin));
-    this.plugin.registerView(BROWSE_VIEW, (leaf) => new BrowseView(leaf, this.plugin));
+    this.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this.plugin));
+    this.registerView(BROWSE_VIEW, (leaf) => new BrowseView(leaf, this.plugin));
   }
 
   enable() {
     const ws = this.app.workspace;
     const redraw = () => this.screens().forEach((s) => s.refresh());
-    ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
+    this.listen(ws, ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'file-open'], redraw);
     // A note's properties show only in search and a filter's list: the tree and a folder's page are left be while one is typed.
     this.listen(ws, 'design-redux:props', () => this.screens().filter((s) => s.query !== null || s.filter).forEach((s) => s.refresh()));
     const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.openSidebar());
     this.add(() => ribbon && ribbon.remove && ribbon.remove());
-    this.add(() => {
-      if (this.plugin.unloading) return;
-      ws.detachLeavesOfType(LIBRARY_VIEW);
-      ws.detachLeavesOfType(BROWSE_VIEW);
-    });
     // With the look on, Obsidian's tab strip and the sidebars' toggles are hidden, so nothing could bring the
     // library forward again: it is kept the tab the left sidebar shows, from the start and after any layout change.
     this.keepShown();
@@ -59,7 +54,7 @@ export class Library extends Feature {
   }
 
   screens() {
-    return Array.from(this.plugin.screens || []);
+    return Array.from(openScreens);
   }
 
   /** The screen an action means: the browse view if it has the page, else the sidebar's. */
@@ -116,7 +111,6 @@ export class Library extends Feature {
       { id: 'reset-layout', name: 'Put the library back in place', run: async () => {
         this.app.workspace.detachLeavesOfType(LIBRARY_VIEW);
         await this.openSidebar();
-        this.app.workspace.trigger('design-redux:reset-layout');
       } },
       { id: 'go-back', name: 'Go back', when: () => !!screen(), run: () => screen().back() },
       { id: 'go-forward', name: 'Go forward', when: () => !!screen() && screen().ahead.length > 0, run: () => screen().forward() },

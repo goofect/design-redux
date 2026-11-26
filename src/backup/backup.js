@@ -96,7 +96,7 @@ export class Backup extends Feature {
 
   enable() {
     const vault = this.app.vault;
-    ['create', 'modify', 'delete'].forEach((name) => this.listen(vault, name, () => this.changed()));
+    this.listen(vault, ['create', 'modify', 'delete'], () => this.changed());
     this.listen(vault, 'rename', (entry, from) => {
       this.targets().forEach((s) => {
         if (!this.renames.has(s.id)) this.renames.set(s.id, []);

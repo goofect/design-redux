@@ -16,7 +16,7 @@ import { nameRegion, pinnedFirst, shownFolders } from './contents.js';
 export function drawTree(screen, host) {
   const plugin = screen.plugin;
   const root = screen.app.vault.getRoot();
-  const open = plugin.openFolder || null;
+  const open = plugin.selection.folder;
   const unfolded = new Set();
   for (let f = open; f && f.path !== '/'; f = f.parent) unfolded.add(f.path);
   const list = rows(host, { outline: true });

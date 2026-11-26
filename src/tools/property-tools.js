@@ -84,7 +84,6 @@ export class PropertyTools extends Feature {
     const files = this.having(key);
     if (!to && !(await this.bulk.ask(`Rename ${key} to ${name}`, files, `${key} becomes ${name}`))) return 0;
     const n = await this.bulk.run(files, `${key} renamed to ${name}`, (fm) => void renameKey(fm, key, name));
-    this.app.workspace.trigger('design-redux:property-renamed', key, name);
     return n;
   }
 

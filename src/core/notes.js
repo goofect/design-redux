@@ -116,6 +116,22 @@ export class Notes {
     return propOf(this.props(file), key);
   }
 
+  /** Rules for what a property may hold, `{ check(file, key, value), allowed(file, key) }`, from the feature that keeps them. Returns how to take them back. */
+  useChecks(checks) {
+    this.checks = checks;
+    return () => { if (this.checks === checks) this.checks = null; };
+  }
+
+  /** What is wrong with a property's value by the rules, or null. */
+  check(file, key, value) {
+    return this.checks ? this.checks.check(file, key, value) : null;
+  }
+
+  /** The values the rules allow a property, or null for any. */
+  allowed(file, key) {
+    return this.checks ? this.checks.allowed(file, key) : null;
+  }
+
   /**
    * Changes a note's properties: `change(fm)` edits them in place. Returns
    * { file, before, after, order }, or null when the note could not be written.

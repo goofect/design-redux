@@ -1,15 +1,26 @@
 /* ------------------------------------------------------------------ */
-/* Selection: the pick                                                 */
+/* Selection: where the person is                                      */
 /*                                                                     */
 /* One thing at a time is picked, a folder or a note, by path. The     */
 /* library marks it and acts on it. Whoever cares listens for          */
-/* 'design-redux:pick' on the workspace.                               */
+/* 'design-redux:pick' on the workspace. Beside it, the folder open in */
+/* the library's page.                                                 */
 /* ------------------------------------------------------------------ */
 
 export class Selection {
   constructor(plugin) {
     this.plugin = plugin;
     this.path = null;
+    this.open = null;
+  }
+
+  /** The folder open in the library's page, or null (the vault, none, or one since deleted). A folder keeps its object through a rename. */
+  get folder() {
+    return this.open && this.plugin.app.vault.getAbstractFileByPath(this.open.path) ? this.open : null;
+  }
+
+  set folder(folder) {
+    this.open = folder && folder.path !== '/' ? folder : null;
   }
 
   /** The file or folder picked, or null (also when it has since been deleted). */

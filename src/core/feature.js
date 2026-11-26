@@ -53,8 +53,9 @@ export class Feature {
     return undo;
   }
 
-  /** Listens on something of Obsidian's (the workspace, the vault) for as long as the feature is on. */
+  /** Listens on something of Obsidian's (the workspace, the vault) for as long as the feature is on; `name` may be a list. */
   listen(source, name, fn) {
+    if (Array.isArray(name)) return name.map((n) => this.listen(source, n, fn));
     const ref = source.on(name, fn);
     this.add(() => source.offref(ref));
     return ref;
@@ -64,6 +65,15 @@ export class Feature {
   listenDom(target, type, fn, options) {
     target.addEventListener(type, fn, options);
     this.add(() => target.removeEventListener(type, fn, options));
+  }
+
+  /**
+   * Registers one of its views, once, in register(). Its leaves close when the feature turns
+   * off, but not when Obsidian unloads the plugin: Obsidian keeps them for the next load.
+   */
+  registerView(type, make) {
+    this.plugin.registerView(type, make);
+    (this.views || (this.views = [])).push(type);
   }
 
   /** Keeps a place among the editors' extensions, once, in register(): `useEditor` fills it while the feature is on. */
@@ -130,6 +140,7 @@ export class Feature {
           console.error('Design Redux: could not undo', err);
         }
       });
+      if (this.views && !this.plugin.unloading) this.views.forEach((type) => this.app.workspace.detachLeavesOfType(type));
     }
   }
 }

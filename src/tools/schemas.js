@@ -52,16 +52,12 @@ export function valueFault(entry, value) {
 
 export class PropertySchemas extends Feature {
   enable() {
-    this.plugin.checkValue = (file, key, value) => {
-      const entry = this.schemaOf(file).find((e) => e.key.toLowerCase() === key.toLowerCase());
-      return entry ? valueFault(entry, value) : null;
-    };
-    // The values a folder's schema allows a property, for the ledger to offer while one is typed.
-    this.plugin.allowedValues = (file, key) => {
-      const entry = this.schemaOf(file).find((e) => e.key.toLowerCase() === key.toLowerCase());
-      return entry && entry.values && entry.values.length ? entry.values : null;
-    };
-    this.add(() => { delete this.plugin.checkValue; delete this.plugin.allowedValues; });
+    const entryOf = (file, key) => this.schemaOf(file).find((e) => e.key.toLowerCase() === key.toLowerCase());
+    // A folder's schema is the notes' rules: the ledger marks a wrong value, and offers the allowed ones while one is typed.
+    this.add(this.plugin.notes.useChecks({
+      check: (file, key, value) => { const entry = entryOf(file, key); return entry ? valueFault(entry, value) : null; },
+      allowed: (file, key) => { const entry = entryOf(file, key); return entry && entry.values && entry.values.length ? entry.values : null; },
+    }));
   }
 
   /** The schema that holds for a note: its folder's, or the nearest folder above that has one. */

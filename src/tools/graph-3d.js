@@ -201,7 +201,7 @@ export class Graph3DView extends ItemView {
 
 export class Graph3D extends Feature {
   register() {
-    this.plugin.registerView(GRAPH_3D_VIEW, (leaf) => new Graph3DView(leaf, this.plugin));
+    this.registerView(GRAPH_3D_VIEW, (leaf) => new Graph3DView(leaf, this.plugin));
   }
 
   enable() {
@@ -209,7 +209,6 @@ export class Graph3D extends Feature {
     const again = () => ws.getLeavesOfType(GRAPH_3D_VIEW).forEach((l) => l.view && l.view.canvas && l.view.schedule());
     this.listen(ws, 'design-redux:links', again);
     this.listen(ws, 'file-open', () => ws.getLeavesOfType(GRAPH_3D_VIEW).forEach((l) => l.view && l.view.draw && l.view.draw()));
-    this.add(() => !this.plugin.unloading && ws.detachLeavesOfType(GRAPH_3D_VIEW));
   }
 
   async open(around) {
