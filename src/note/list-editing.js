@@ -4,15 +4,15 @@
 /* What Obsidian's own lists do as one types, for the markers it takes */
 /* for no list (3.1.1., a., iv.): Enter carries the list on, or splits */
 /* an item where the cursor is; Backspace just after a marker takes it */
-/* away; Tab and Shift-Tab nest an item, or each item selected; an     */
-/* item moves up or down with what is under it; and after any change   */
-/* that adds or takes away lines, the numbers after it count on, in    */
-/* the same Undo. Every step returns whether it did anything, so on    */
-/* any other line Obsidian's own keys run.                             */
+/* away; Tab and Shift-Tab move an item a level in or out as typed (no */
+/* marker of their own); an item moves up or down with what is under  */
+/* it; and after any change that adds or takes away lines, the numbers */
+/* after it count on, in the same Undo. Every step returns whether it  */
+/* did anything, so on any other line Obsidian's own keys run.         */
 /* ------------------------------------------------------------------ */
 
 import { EditorState } from '@codemirror/state';
-import { around, depth, entryOf, firstUnder, isMarker, LIST_ITEM, listStarts, nextMarker, readMarker, renumber } from './list-markers.js';
+import { around, depth, entryOf, isMarker, LIST_ITEM, listStarts, nextMarker, readMarker, renumber } from './list-markers.js';
 
 const lead = (line) => depth(/^[ \t]*/.exec(line)[0]);
 
@@ -130,7 +130,7 @@ export class ListEditing {
     const { at, line, m, near } = it;
     // A lone "a." is a sentence's start more often than a list: carried on only once the list has two items, or the item has words.
     if (!m[5].trim() && at.ch === line.length) {
-      if (m[1]) return this.outdent(editor);
+      if (m[1]) return this.stepOut(editor);
       // An outline written flat steps out by its number: 1.2. to 2., 1.1.2. to 1.2.
       if (it.kind === 'outline') {
         const parts = m[2].split('.');
@@ -180,51 +180,35 @@ export class ListEditing {
     return true;
   }
 
-  /** One indent in: the item carries on the list at that depth, or starts one under the item above. Each item selected, where several are. */
+  /**
+   * Tab on an item: one indent in, the item as typed (no marker of its own,
+   * nothing counted on). Several lines selected, or a line that is no item,
+   * are left to Obsidian.
+   */
   indent(editor) {
-    if (this.many(editor)) return this.each(editor, (lines) => this.indent(lines));
     const it = this.item(editor);
-    if (!it || !it.near.sibling) return false;
-    const indent = it.m[1] + this.unit();
-    const above = around(editor, it.near.siblingAt, depth(it.m[1])).sibling;
-    this.remark(editor, it, indent, this.nextAt(editor, it.at.line, indent) || firstUnder(it.near.sibling, above));
+    if (!it) return false;
+    const unit = this.unit();
+    this.write(editor, [{ line: it.at.line, from: 0, to: 0, text: unit }], { line: it.at.line, ch: it.at.ch + unit.length });
     return true;
   }
 
-  /** One indent out: the item carries on the list it steps back into. Each item selected, where several are. */
+  /** Shift-Tab on an item: one indent out, the item as typed. At the margin, or on anything else, Obsidian's. */
   outdent(editor) {
-    if (this.many(editor)) return this.each(editor, (lines) => this.outdent(lines));
+    const it = this.item(editor);
+    const cut = it && /^(\t| {1,4})/.exec(it.m[1]);
+    if (!cut) return false;
+    this.write(editor, [{ line: it.at.line, from: 0, to: cut[0].length, text: '' }], { line: it.at.line, ch: Math.max(0, it.at.ch - cut[0].length) });
+    return true;
+  }
+
+  /** Enter on an empty item that is indented: one level out, carrying on the list it steps back into. */
+  stepOut(editor) {
     const it = this.item(editor);
     if (!it || !it.m[1]) return false;
     const indent = it.m[1].replace(/(\t| {1,4})$/, '');
     const next = this.nextAt(editor, it.at.line, indent);
     this.remark(editor, it, indent, next && !/^[-*+]$/.test(next) ? next : it.m[2]);
-    return true;
-  }
-
-  /** Whether the selection spans lines with an item of these among them. */
-  many(editor) {
-    const from = editor.getCursor('from').line;
-    const to = editor.getCursor('to').line;
-    if (from === to) return false;
-    for (let i = from; i <= to; i++) if (LIST_ITEM.test(editor.getLine(i))) return true;
-    return false;
-  }
-
-  /** A step taken on each item selected, in turn, worked out first and written as one change; the lines stay selected. */
-  each(editor, step) {
-    const from = editor.getCursor('from');
-    const to = editor.getCursor('to');
-    const before = linesOf(editor);
-    const lines = new Lines(before, from);
-    let did = false;
-    for (let n = from.line; n <= to.line; n++) {
-      if (!LIST_ITEM.test(lines.getLine(n))) continue;
-      lines.setCursor({ line: n, ch: lines.getLine(n).length });
-      did = step(lines) || did;
-    }
-    if (!did || !this.writeLines(editor, before, lines.lines, from)) return false;
-    if (typeof editor.setSelection === 'function') editor.setSelection({ line: from.line, ch: 0 }, { line: to.line, ch: lines.getLine(to.line).length });
     return true;
   }
 

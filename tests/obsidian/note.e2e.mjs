@@ -169,7 +169,11 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
     await browser.keys(['Enter']);
     await browser.keys('Scope');
+    // Tab: the new item a level in, as typed, with no marker of its own.
     await browser.keys(['Enter', 'Tab']);
+    expect(await readUntil(value, (t) => t.includes('\t1.3. '))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.3. \n');
+    // Its number typed as wanted.
+    await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.replaceRange('\t1.2.1. ', { line: 3, ch: 0 }, { line: 3, ch: e.getLine(3).length }); e.setCursor({ line: 3, ch: 8 }); });
     await browser.keys('Detail');
     expect(await readUntil(value, (t) => t.includes('Detail'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
     // An item put in after Background: Scope and its Detail count on, and one Undo takes it all back.
@@ -344,7 +348,7 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('as-text-reading');
   });
 
-  it('types in a list written as text as in Obsidian\'s own: Enter splits, Backspace after a marker takes it away, Tab on several items, a deleted line counts the rest on, an item moves with what is under it', async function () {
+  it('types in a list written as text as in Obsidian\'s own: Enter splits, Backspace after a marker takes it away, Tab only indents, a deleted line counts the rest on, an item moves with what is under it', async function () {
     const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
     const at = (line, ch) => browser.executeObsidian(({ app }, line, ch) => { const e = app.workspace.activeEditor.editor; e.focus(); e.setCursor({ line, ch }); }, line, ch);
     await browser.executeObsidian(async ({ app }) => {
@@ -362,11 +366,11 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     // A line deleted: the rest count on.
     await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.replaceRange('', { line: 2, ch: 0 }, { line: 3, ch: 0 }));
     expect(await readUntil(value, (t) => !t.includes('two'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n');
-    // Tab with two items selected: both a level in, under the item above them (past its words); Shift-Tab, back out.
+    // Tab with two items selected: Obsidian's own, each line a level in as typed; Shift-Tab, back out.
     await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.replaceRange('\t3.3. five\n', { line: 4, ch: 0 }); });
     await browser.executeObsidian(({ app }) => { const e = app.workspace.activeEditor.editor; e.focus(); e.setSelection({ line: 3, ch: 0 }, { line: 4, ch: 10 }); });
     await browser.keys(['Tab']);
-    expect(await readUntil(value, (t) => t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t\t3.1.1. four\n\t\t3.1.2. five\n');
+    expect(await readUntil(value, (t) => t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t\t3.2. four\n\t\t3.3. five\n');
     await browser.keys(['Shift', 'Tab']);
     await browser.keys(['Shift']);
     expect(await readUntil(value, (t) => !t.includes('\t\t'))).toBe('3. Top\n\t3.1. one\n\tthree\n\t3.2. four\n\t3.3. five\n');

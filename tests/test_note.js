@@ -372,24 +372,29 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const lone = editor('a. ', { line: 0, ch: 3 });
     assert.ok(!lists.carryOn(lone));
     assert.ok(!lists.carryOn(editor('Mr. Smith', { line: 0, ch: 9 })), 'a word with a full stop is no marker');
-    // A) i) and the like: Tab nests a level down, a then i then a; Enter reads the item at its own depth; Shift-Tab steps back out.
-    const nest = editor('A) one\nB) ', { line: 1, ch: 3 });
+    // Tab and Shift-Tab move an item a level in or out as typed: no marker of their own, nothing counted on.
+    const nest = editor('A) one\nB) two', { line: 1, ch: 4 });
     assert.ok(lists.indent(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) ');
-    nest.replaceSelection('sub');
-    assert.ok(lists.carryOn(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\tii) ');
-    assert.ok(lists.indent(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\t\ta) ');
-    assert.ok(lists.carryOn(nest), 'an empty nested item steps out');
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\tii) ');
+    assert.strictEqual(nest.text, 'A) one\n\tB) two', 'Tab gave the item a marker of its own');
+    assert.deepStrictEqual(nest.getCursor(), { line: 1, ch: 5 });
     assert.ok(lists.outdent(nest));
-    assert.strictEqual(nest.text, 'A) one\n\ti) sub\nB) ');
+    assert.strictEqual(nest.text, 'A) one\nB) two');
+    assert.ok(!lists.outdent(nest), 'an item at the margin was taken further out');
+    assert.ok(!lists.indent(editor('plain words', { line: 0, ch: 5 })), 'Tab on words that are no item is not left to Obsidian');
+    const several = editor('a. x\nb. y');
+    several.select({ line: 0, ch: 0 }, { line: 1, ch: 4 });
+    assert.ok(!lists.indent(several), 'Tab on several lines is not left to Obsidian');
+    // Enter: a nested item carries its own list on; on an empty one, it steps out and carries on the list there.
+    const sub = editor('A) one\n\ti) sub', { line: 1, ch: 7 });
+    assert.ok(lists.carryOn(sub));
+    assert.strictEqual(sub.text, 'A) one\n\ti) sub\n\tii) ');
+    assert.ok(lists.carryOn(sub), 'an empty nested item steps out');
+    assert.strictEqual(sub.text, 'A) one\n\ti) sub\nB) ');
     const deep = editor('h. eight\n\ti. one', { line: 1, ch: 7 });
     assert.ok(lists.carryOn(deep), 'i under h is a numeral of its own list');
     assert.strictEqual(deep.text, 'h. eight\n\ti. one\n\tii. ');
     const under = editor('1. first\n\ta. sub\n\tb. ', { line: 2, ch: 4 });
-    assert.ok(lists.outdent(under));
+    assert.ok(lists.carryOn(under));
     assert.strictEqual(under.text, '1. first\n\ta. sub\n2. ', 'stepping out of a lettered list carries on the numbers');
     const sel = editor('one\ntwo');
     sel.select({ line: 0, ch: 0 }, { line: 1, ch: 3 });
@@ -415,11 +420,6 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(edit.unmark(first));
     assert.strictEqual(first.text, '\ta\n\t1.1. b', 'the next item does not take the first one\'s marker');
     assert.ok(!edit.unmark(editor('1.1. a', { line: 0, ch: 3 })), 'Backspace inside the marker is taken');
-    const several = editor('a. x\nb. y\nc. z');
-    several.select({ line: 1, ch: 0 }, { line: 2, ch: 4 });
-    assert.ok(edit.indent(several));
-    assert.strictEqual(several.text, 'a. x\n\ti. y\n\tii. z');
-    assert.strictEqual(several.changes.length, 1, 'Tab on several items is not one Undo');
     const moving = editor('1. Top\n\t1.1. a\n\t\t1.1.1. deep\n\n\t1.2. b', { line: 4, ch: 7 });
     assert.ok(edit.move(moving, -1));
     assert.strictEqual(moving.text, '1. Top\n\t1.1. b\n\n\t1.2. a\n\t\t1.2.1. deep', 'the item did not move with what is under it, or the numbers did not follow');
@@ -513,12 +513,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([['1', '1.1'], ['1.1', '1.2'], ['1.1.2', '1.2'], ['1.1', '1.3'], ['1', '2.1'], ['a', '1.1']].map(([b, m]) => dr.followsInOutline(b, m)), [true, true, true, false, false, false]);
     const w = await world({ 'A.md': '' });
     const lists = feature(w, 'MarkedLists');
-    const ed = editor('1. Intro\n1.1. one', { line: 1, ch: 8 });
-    assert.ok(lists.carryOn(ed));
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n1.2. ');
-    assert.ok(lists.indent(ed));
-    assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. ');
-    ed.replaceSelection('deep');
+    const ed = editor('1. Intro\n1.1. one\n\t1.1.1. deep', { line: 2, ch: 12 });
     assert.ok(lists.carryOn(ed));
     assert.strictEqual(ed.text, '1. Intro\n1.1. one\n\t1.1.1. deep\n\t1.1.2. ');
     assert.ok(lists.carryOn(ed), 'an empty nested item steps out');
@@ -533,9 +528,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(bare.text, '1. Intro\n1.1 Background\n1.2 ');
     assert.ok(!lists.carryOn(editor('3.5 million people', { line: 0, ch: 18 })), 'a number with a point is no item');
     assert.ok(!lists.carryOn(editor('1. one\n3.5 million', { line: 1, ch: 11 })), 'nor one that does not follow the item above');
-    const out = editor('1. one\n\t1.1 sub', { line: 1, ch: 8 });
-    assert.ok(lists.outdent(out));
-    assert.strictEqual(out.text, '1. one\n2. sub', 'stepping out to a plain number gives it its stop');
+    const out = editor('1. one\n\t1.1 ', { line: 1, ch: 5 });
+    assert.ok(lists.carryOn(out));
+    assert.strictEqual(out.text, '1. one\n2. ', 'stepping out to a plain number gives it its stop');
 
     // As Obsidian numbers its own lists again: an item coming in or moving, the items after it count on, in the same Undo.
     const mid = editor('1.1. a\n1.2. b\n1.2.1. c\n\tmore of c\n1.3. d\n3.5 million\n', { line: 0, ch: 6 });
@@ -545,15 +540,12 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual(mid.getCursor(), { line: 1, ch: 5 });
     const tab = editor('1.1. a\n1.2. b\n1.3. c', { line: 1, ch: 6 });
     assert.ok(lists.indent(tab));
-    assert.strictEqual(tab.text, '1.1. a\n\t1.1.1. b\n1.2. c');
+    assert.strictEqual(tab.text, '1.1. a\n\t1.2. b\n1.3. c', 'Tab renumbered');
     assert.ok(lists.outdent(tab));
     assert.strictEqual(tab.text, '1.1. a\n1.2. b\n1.3. c');
     const letters = editor('a. x\nb. y\nc. z\nMr. Smith', { line: 0, ch: 4 });
     assert.ok(lists.carryOn(letters));
     assert.strictEqual(letters.text, 'a. x\nb. \nc. y\nd. z\nMr. Smith');
-    const moved = editor('a. x\nb. y\nc. z', { line: 1, ch: 4 });
-    assert.ok(lists.indent(moved));
-    assert.strictEqual(moved.text, 'a. x\n\ti. y\nb. z', 'the items it left do not count on without it');
 
     const d = w.doc;
     const shape = (list) => Array.from(list.children).map((row) => [row.dataset.marker, Array.from(row.childNodes).filter((n) => !n.classList || !n.classList.contains('dr-marked-list')).map((n) => n.textContent).join('')]);
