@@ -206,8 +206,14 @@ none can be extended:
   and in the cache's worker. It gives the HTML, `listItems` and `sections`.
 
 All three take only `1.` / `1)` as an ordered marker, so `3.1.1.`, `a.` and
-`iv.` are paragraphs everywhere. A plugin changes the result in one of two
-ways:
+`iv.` are paragraphs everywhere. The rules in 1.15.1:
+- drawing: `/^(?:[*\-+]|^[0-9]+([.)]))\s+/`;
+- commands: `/^([>\s]*)(([*+-] |(\d+)([.)] ))(?:\[(.)\] )?)?/`;
+- reading view and cache: `/^([ \t]*)([*+-]|\d+[.)])( {1,4}(?! )| |\t|$|(?=\n))([^\n]*)/`.
+
+`obsidian-source.mjs --regexes "[.)]"` prints them again after an update.
+
+A plugin changes the result in one of two ways:
 - **the look:** keep a standard list and draw other numbers (CSS counters
   in the reading view, a widget in the editor);
 - **every layer:** own the editor's decorations and keys, a post-processor,
