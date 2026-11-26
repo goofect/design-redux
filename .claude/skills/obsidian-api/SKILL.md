@@ -5,10 +5,11 @@ description: "Obsidian's plugin API, its JavaScript runtime, its Markdown parser
 
 # Obsidian API: functionality and performance
 
-Checked on 2026-11-23 against three sources:
+Checked on 2026-11-26 against these sources:
 - the `obsidian` package 1.14.4 (`obsidian.d.ts`), still the latest on npm;
 - the changelogs of Obsidian 1.15.0 and 1.15.1;
-- 1.15.1's `app.css`.
+- 1.15.1's `app.css`, `app.js` and `worker.js`;
+- Obsidian's developer docs (2026-11-25).
 
 The app is ahead of its typings. Anything below marked 1.15 runs but isn't
 typed yet: guard it at runtime. Otherwise the installed types are the source
@@ -26,6 +27,7 @@ Design Redux repo at `.claude/skills/obsidian-api/`
 | `scripts/obsidian-api.mjs <name>` | A declaration's signature, owner, `@since`, `@deprecated` and summary. `--class Workspace` lists a class, `--since 1.13` lists what was added from a version, `--deprecated` lists everything deprecated, and `--full` prints the whole doc comment. A name it can't find is not public API. |
 | `scripts/obsidian-audit.mjs [src]` | Deprecated APIs in use, APIs newer than `minAppVersion`, risks of data loss or of breaking in a window or a version (including 1.15's runtime changes), slow patterns, and unguarded internals, each with file:line. `--stand-in tests/obsidian.js` also lists API methods a test stand-in lacks, and `--dts <path>` checks against other typings. |
 | `scripts/obsidian-source.mjs` | Obsidian's own `app.js` / `worker.js` from the same `.asar`: `--find <text or /regex/>` each place a string occurs, with context; `--regexes <text>` every regex literal containing it (`--regexes "[.)]"` prints the three list rules); `--files` the scripts. For how Obsidian really does something the API doesn't say. |
+| `scripts/build-handbook.mjs` | Joins this skill into one `HANDBOOK.md` that any AI can be given, and lists every public declaration of the installed `obsidian.d.ts` in `API.md` (signature, version, first sentence, deprecation). `--dts <path>`, `--out <folder>`; `API.md` needs `typescript`. |
 | `scripts/obsidian-css.mjs` | Obsidian's own `app.css`. `--vars [filter]` lists every variable and value, `--selector ".cm-line"` the rules for a selector, `--uses --file-line-width` the rules that read a variable, and `--dump` prints the file. It finds the app's `.asar` on macOS and Linux, or takes `--asar <path>`. |
 
 When to use them:
@@ -48,6 +50,22 @@ The references:
   - the 2026 esbuild config;
   - typing and linting plain JavaScript;
   - testing.
+- `references/areas.md`: the other areas of the API, each with its
+  pattern:
+  - custom file types (`TextFileView`);
+  - the `Editor` and Markdown views;
+  - `EditorSuggest` and input suggestions;
+  - hover previews;
+  - links and paths;
+  - utilities;
+  - keys and `Scope`;
+  - the workspace tree and view state;
+  - the `DataAdapter`;
+  - URIs and the CLI;
+  - Bases values and `.base` files;
+  - Canvas;
+  - releasing and debugging;
+  - internals.
 - `references/performance.md`: startup, vault reads, events, drawing, the
   editor, reading view, writes, memory, and how to measure.
 - `references/architecture.md`: how the large plugins organise their code,
@@ -114,6 +132,8 @@ The detail is in `references/javascript.md`.
   `registerView`, `registerEditorExtension`,
   `registerMarkdownPostProcessor` and `addChild`. Anything else needs its
   own cleanup (workers, observers, IndexedDB connections).
+- The manifest's `id` must match the plugin's folder name, or
+  `onExternalSettingsChange` isn't called.
 - Don't detach your views' leaves in `onunload()`: Obsidian restores them in
   place after an update.
 - `onUserEnable()` (1.7.2) runs when the person turns the plugin on, not at
@@ -228,7 +248,9 @@ Replacing the editor's language is possible (the highest-precedence
   and call `workspace.updateOptions()`, which rebuilds every editor, so not
   per event.
 - In an extension, the note is `state.field(editorInfoField)`
-  (`editorViewField` is deprecated).
+  (`editorViewField` is deprecated), and Live Preview is
+  `state.field(editorLivePreviewField)`. From outside, a view's CodeMirror
+  `EditorView` is `view.editor.cm` (untyped).
 - `@codemirror/*` and `@lezer/*` are provided by Obsidian at runtime: mark
   them external when bundling, so there is one copy. The 1.14.4 typings pin
   `@codemirror/state` 6.7.6 and `@codemirror/view` 6.43.13: install those
@@ -354,7 +376,9 @@ Common ones are `app.commands.executeCommandById`, `app.setting.open()`,
 `app.plugins`, `app.internalPlugins`, `vault.getConfig`,
 `app.metadataTypeManager`, `MenuItem.setSubmenu`, and 1.15's `window.pele`.
 They can change in any release: guard each with a `typeof` check, and keep a
-way through when it's missing. `obsidian-audit.mjs` lists them and whether
+way through when it's missing. The community package `obsidian-typings`
+(6.64.0) types them for the type checker; `references/areas.md` lists the
+useful ones. `obsidian-audit.mjs` lists them and whether
 they're guarded.
 
 ## Performance in brief
@@ -376,7 +400,8 @@ The detail is in `references/performance.md`.
 - **Writing.** Write many notes one at a time, skipping those that wouldn't
   change.
 - **Measuring.**
-  - Settings → Community plugins shows each plugin's startup time.
+  - Settings → General → Advanced → the stopwatch shows startup time, and
+    Settings → Community plugins each plugin's.
   - `performance.mark` / `measure` put labelled spans in DevTools'
     Performance tab. Record while reloading the app to profile startup.
   - Check `process.versions.chrome`: an old installer is slower for reasons
@@ -414,6 +439,7 @@ The detail is in `references/community.md`.
 
 - The `obsidian` package 1.14.4, `obsidian.d.ts` (npm, checked 2026-11-23).
 - Obsidian 1.15.1's `app.js` and `worker.js`, from its release `.asar` on GitHub (read 2026-11-26).
+- Obsidian's developer docs ([obsidianmd/obsidian-developer-docs](https://github.com/obsidianmd/obsidian-developer-docs), 2026-11-25) and the obsidian-api repository (2026-11-19, still 1.14.4).
 - [Obsidian changelog](https://obsidian.md/changelog/): [1.15.0](https://obsidian.md/changelog/2026-11-02-desktop-v1.15.0/), [1.15.1](https://obsidian.md/changelog/2026-11-12-desktop-v1.15.1/), [1.14.4](https://obsidian.md/changelog/2026-10-01-desktop-v1.14.4/), [1.14.5](https://obsidian.md/changelog/2026-10-22-desktop-v1.14.5/).
 - [Settings](https://docs.obsidian.md/Plugins/User+interface/Settings) and [migrating to declarative settings](https://docs.obsidian.md/plugins/guides/migrate-declarative-settings); [Bases views](https://docs.obsidian.md/plugins/guides/bases-view).
 - [Electron 43.0](https://www.electronjs.org/blog/electron-43-0) and the installer versions in `references/javascript.md`.
