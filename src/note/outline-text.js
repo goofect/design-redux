@@ -5,9 +5,9 @@
 /* Markdown. Under a list, and above all under an outline written as   */
 /* text (2.1., i.), that is the note's own words and items, indented   */
 /* to sit under them: they are drawn as the text they are, each run of */
-/* lines rendered as Markdown at its indent. In live preview the       */
-/* paragraph the cursor is in shows as typed, without the code's look, */
-/* hung by its indent.                                                 */
+/* lines rendered as Markdown at its indent. In live preview a line at */
+/* a time, the one the cursor is on as typed, without the code's look, */
+/* hung by its indent, as live preview shows the rest of a note.       */
 /* The note's text is left as written. Fenced code, and indented code  */
 /* after words at the margin, stay code.                               */
 /* ------------------------------------------------------------------ */
@@ -47,14 +47,19 @@ export function renderAsText(app, root, lines, sourcePath, component, levelOf = 
     part.className = 'dr-as-text';
     const level = Math.max(0, levelOf(group, i));
     part.style.setProperty('--dr-indent', String(level));
-    // In the editor, a guide a level, as Obsidian draws one on each indented line it lays out itself.
-    for (let k = 0; guides && k < level; k++) {
-      const guide = part.appendChild(doc.createElement('span'));
-      guide.className = 'dr-as-text-guide';
-      guide.style.setProperty('--dr-at', String(k));
-    }
+
     // Lines after the first carry on its paragraph, whatever their indent: Markdown never makes them code.
-    MarkdownRenderer.render(app, [group[0].replace(/^[ \t]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
+    const drawn = MarkdownRenderer.render(app, [group[0].replace(/^[ \t]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
+    // In the editor, a guide a level, as Obsidian draws one on each indented line it lays out itself: after the text, so its first block keeps no margin.
+    if (guides && level) {
+      Promise.resolve(drawn).then(() => {
+        for (let k = 0; k < level; k++) {
+          const guide = part.appendChild(doc.createElement('span'));
+          guide.className = 'dr-as-text-guide';
+          guide.style.setProperty('--dr-at', String(k));
+        }
+      });
+    }
   });
 }
 
@@ -141,26 +146,17 @@ export function codeAsTextField(app, pathOf, live) {
     const doc = state.doc;
     if (live(state)) {
       runs.forEach(({ from, to }) => {
-        // A paragraph at a time, as the blank lines part them: the one the cursor is in as typed, the rest as text.
+        // A line at a time, as live preview shows the rest of a note: the line the cursor is on as typed, the others as text.
         for (let n = from; n <= to; n++) {
-          if (!doc.line(n).text.trim()) continue;
-          let last = n;
-          while (last < to && doc.line(last + 1).text.trim()) last++;
-          const a = doc.line(n);
-          const z = doc.line(last);
-          if (state.selection.ranges.some((r) => r.from <= z.to && r.to >= a.from)) {
-            for (let k = n; k <= last; k++) {
-              const line = doc.line(k);
-              // Hung by its indent, as Obsidian hangs an indented line: a long line wraps under its words, not at the margin.
-              const hang = `calc(${Math.round(lead(line.text) / 4)} * var(--list-indent))`;
-              out.add(line.from, line.from, Decoration.line({ class: 'dr-as-text-raw', attributes: { style: `padding-inline-start: ${hang}; text-indent: calc(-1 * ${hang})` } }));
-            }
+          const line = doc.line(n);
+          if (!line.text.trim()) continue;
+          if (state.selection.ranges.some((r) => r.from <= line.to && r.to >= line.from)) {
+            // Hung by its indent, as Obsidian hangs an indented line: a long line wraps under its words, not at the margin.
+            const hang = `calc(${Math.round(lead(line.text) / 4)} * var(--list-indent))`;
+            out.add(line.from, line.from, Decoration.line({ class: 'dr-as-text-raw', attributes: { style: `padding-inline-start: ${hang}; text-indent: calc(-1 * ${hang})` } }));
           } else {
-            const lines = [];
-            for (let k = n; k <= last; k++) lines.push(doc.line(k).text);
-            out.add(a.from, z.to, Decoration.replace({ widget: new AsText(app, lines, pathOf(state)), block: true }));
+            out.add(line.from, line.to, Decoration.replace({ widget: new AsText(app, [line.text], pathOf(state)), block: true }));
           }
-          n = last;
         }
       });
     }

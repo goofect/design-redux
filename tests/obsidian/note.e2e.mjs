@@ -153,12 +153,38 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(at).toEqual({ cursor: { line: 0, ch: 11 }, inText: true });
   });
 
-  it('draws an outline an older note wrote as text (1.1., 1.2.) as Obsidian draws its own numbered lists, in the editor and in reading view', async function () {
+  it('draws an outline (1.1., 1.2.) as Obsidian draws its own numbered lists, and numbers it again as Obsidian does: Enter carries on, Tab nests, an item put in counts the rest on in one Undo', async function () {
     await browser.executeObsidian(async ({ app }) => {
-      const file = app.vault.getAbstractFileByPath('Politics/Outline.md') || (await app.vault.create('Politics/Outline.md', '1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n'));
-      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
+      const path = 'Politics/Outline.md';
+      const start = '1. Intro\n1.1. Background\n';
+      const had = app.vault.getAbstractFileByPath(path);
+      // Written afresh, so a second try starts where the first did.
+      const file = had ? (await app.vault.modify(had, start), had) : await app.vault.create(path, start);
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
+      const editor = app.workspace.activeEditor.editor;
+      editor.focus();
+      editor.setCursor({ line: 1, ch: editor.getLine(1).length });
     });
-    await readUntil(() => browser.execute(() => document.querySelectorAll('.workspace-leaf.mod-active .dr-marked-item').length), (n) => n === 3);
+    const value = () => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue());
+    await browser.keys(['Enter']);
+    await browser.keys('Scope');
+    await browser.keys(['Enter', 'Tab']);
+    await browser.keys('Detail');
+    expect(await readUntil(value, (t) => t.includes('Detail'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
+    // An item put in after Background: Scope and its Detail count on, and one Undo takes it all back.
+    await browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.setCursor({ line: 1, ch: 15 }));
+    await browser.keys(['Enter']);
+    await browser.keys('New');
+    expect(await readUntil(value, (t) => t.includes('New'))).toBe('1. Intro\n1.1. Background\n1.2. New\n1.3. Scope\n\t1.3.1. Detail\n');
+    // Undone once Obsidian has saved what was typed: an undo while its save is still on the way meets that save coming back.
+    await readUntil(() => browser.executeObsidian(async ({ app }) => (await app.vault.adapter.read('Politics/Outline.md')) === app.workspace.activeEditor.editor.getValue()), (same) => same, 8000);
+    await browser.executeObsidian(({ app }) => {
+      const editor = app.workspace.activeEditor.editor;
+      editor.undo();
+      editor.undo();
+    });
+    expect(await readUntil(value, (t) => !t.includes('New'))).toBe('1. Intro\n1.1. Background\n1.2. Scope\n\t1.2.1. Detail\n');
     // Beside Obsidian's own "1.": the same grey, the same inset, the same spacing between items.
     const drawn = await browser.execute(() => {
       const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line'));
@@ -285,14 +311,24 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       }),
       (v) => v.lines.length > 0
     );
-    // Only the paragraph the cursor is in, as typed: in the text's face and size, no line round it, a long line hung by its indent.
-    expect(raw.lines).toEqual(['ii. **Function**', '*Parliamentary accountability* connects things.']);
+    // Only the line the cursor is on, as typed: in the text's face and size, no line round it, a long line hung by its indent.
+    expect(raw.lines).toEqual(['ii. **Function**']);
     expect(raw.rest).toBeGreaterThan(0);
     expect(raw.border).toBe('0px');
     expect(raw.face[0]).toBe(raw.face[1]);
     expect(raw.size[0]).toBe(raw.size[1]);
     expect(raw.hung).toBe(true);
     await shot('as-text-editing');
+    // Typing in it as in any list: Enter at the end of 3.1.1. starts 3.1.2.
+    await browser.executeObsidian(({ app }) => {
+      const editor = app.workspace.activeEditor.editor;
+      editor.focus();
+      editor.setCursor({ line: 16, ch: editor.getLine(16).length });
+    });
+    await browser.keys(['Enter']);
+    await browser.keys('Next');
+    const typed = await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getLine(17)), (l) => l.includes('Next'));
+    expect(typed).toBe('\t\t3.1.2. Next');
     await browser.executeObsidian(async ({ app }, path) => {
       await app.workspace.getMostRecentLeaf().setViewState({ type: 'markdown', state: { file: path, mode: 'preview' } });
     }, path);

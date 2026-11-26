@@ -165,7 +165,8 @@
   margin-block-start: 0;
 }
 
-.dr-as-text > :last-child {
+.dr-as-text > :last-child,
+.dr-as-text > :has(+ .dr-as-text-guide) {
   margin-block-end: 0;
 }
 

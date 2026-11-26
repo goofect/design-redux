@@ -1,24 +1,26 @@
 /* ------------------------------------------------------------------ */
-/* Numbered lists                                                      */
+/* Numbered lists, two ways                                            */
 /*                                                                     */
-/* A note's numbered lists are Obsidian's own (1. items, nested by     */
-/* indent), and its `numbering` property says how they read, an        */
-/* outline (1.1.) or a style a level (1 a i). Obsidian does everything */
-/* a list does; the plugin only draws each item's label, in the editor */
-/* and in reading view (numbering.js). Four commands set it, making    */
-/* the selected lines one of Obsidian's lists first.                   */
+/* The way that keeps in step with Obsidian: a note's numbered lists   */
+/* are Obsidian's own (1. items, nested by indent), and its `numbering` */
+/* property says how they read, an outline (1.1.) or a style a level   */
+/* (1 a i). Obsidian does everything a list does; the plugin only      */
+/* draws each item's label, in the editor and in reading view          */
+/* (numbering.js). Four commands set it, making the selected lines a   */
+/* list first.                                                         */
 /*                                                                     */
-/* Markers an older note has written as text, a., i., 1.1., which are  */
-/* paragraphs to Obsidian, are still drawn as lists, so the note reads */
-/* as it did, and what Markdown takes for code under them as the text  */
-/* it is (outline-text.js); the commands make them Obsidian's lists.   */
+/* And markers written as text, a., i., 1.1., which are paragraphs to  */
+/* Obsidian: Enter carries them on, Tab and Shift-Tab nest them, the   */
+/* items after count on in the same Undo; they are drawn as Obsidian's */
+/* own numbered lists are, and what Markdown takes for code under them */
+/* as the text it is (outline-text.js). The note's text is as written. */
 /* ------------------------------------------------------------------ */
 
 import { editorInfoField, editorLivePreviewField } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { listLines, numberLines } from './lists-editor.js';
 import { rebuildList } from './lists-reading.js';
-import { measurer } from './list-markers.js';
+import { around, depth, firstUnder, isMarker, LIST_ITEM, measurer, nextMarker, readMarker, renumber } from './list-markers.js';
 import { codeAsTextField, codeAsTextReading } from './outline-text.js';
 import { NUMBERING, numberingText, numberRendered, outlineToReal, parseNumbering, toRealList } from './numbering.js';
 
@@ -62,6 +64,113 @@ export class MarkedLists extends Feature {
     });
     this.redrawReading();
     this.add(() => this.redrawReading()); // the feature is off by now: the lists go back to the paragraphs they were
+    // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists.
+    const keys = (e) => {
+      if (e.isComposing || e.altKey || e.metaKey || e.ctrlKey) return;
+      if (e.key !== 'Tab' && (e.key !== 'Enter' || e.shiftKey)) return;
+      const view = this.app.workspace.activeEditor || null;
+      const editor = view && view.editor;
+      if (!editor || !e.target.closest || !e.target.closest('.cm-content')) return;
+      const done = e.key === 'Enter' ? this.carryOn(editor) : e.shiftKey ? this.outdent(editor) : this.indent(editor);
+      if (done) e.preventDefault();
+    };
+    this.eachWindow((doc) => this.listenDom(doc, 'keydown', keys, true));
+  }
+
+  /** The marked item the cursor is on, if its kind is turned on and nothing spans lines. */
+  item(editor) {
+    const from = editor.getCursor('from');
+    const at = editor.getCursor('to');
+    if (from.line !== at.line) return null;
+    const line = editor.getLine(at.line);
+    const m = LIST_ITEM.exec(line);
+    if (!m) return null;
+    const near = around(editor, at.line, depth(m[1]));
+    if (!isMarker(m[2], near.sibling, m[3], near.parent)) return null;
+    return { at, line, m, near, kind: readMarker(m[2], near.sibling).kind };
+  }
+
+  /**
+   * Writes the item's line edits and the list counted on after them in one
+   * change, one Undo, as Obsidian does for its own lists; then the cursor.
+   * `edits` are [{ line, from, to, text }] in the text as it was.
+   */
+  write(editor, edits, cursor) {
+    const seen = new Set();
+    const changes = edits.filter((c) => !seen.has(`${c.line}:${c.from}`) && seen.add(`${c.line}:${c.from}`));
+    editor.transaction({ changes: changes.map((c) => ({ from: { line: c.line, ch: c.from }, to: { line: c.line, ch: c.to }, text: c.text })) });
+    editor.setCursor(cursor);
+  }
+
+  /** Puts `marker` and `indent` in place of the item's, keeping the cursor on the same word; the list after it, and the one it left, count on. */
+  remark(editor, it, indent, marker) {
+    const { at, m, line } = it;
+    // A plain number is Markdown's own list only with its stop: "1.1" stepping out to "2" is written "2.".
+    const stop = m[3] || (/^\d+$/.test(marker) ? '.' : '');
+    const head = `${indent}${marker}${stop}${m[4]}`;
+    const old = m[1].length + m[2].length + m[3].length + m[4].length;
+    const lineOf = (i) => (i === at.line ? head + line.slice(old) : editor.getLine(i));
+    const count = editor.lineCount();
+    // The items it was among count on from the one above it there, where it moved in or out.
+    const left = indent !== m[1] && it.near.siblingAt !== undefined ? renumber(lineOf, count, it.near.siblingAt) : [];
+    this.write(editor, [{ line: at.line, from: 0, to: old, text: head }].concat(renumber(lineOf, count, at.line), left),
+      { line: at.line, ch: Math.max(head.length, at.ch + head.length - old) });
+  }
+
+  /** At the end of a list item: starts the next (or, on an empty item, steps out or ends the list). Returns whether it did. */
+  carryOn(editor) {
+    const it = this.item(editor);
+    if (!it || it.at.ch < it.line.length) return false;
+    const { at, line, m, near } = it;
+    // A lone "a." is a sentence's start more often than a list: carried on only once the list has two items, or the item has words.
+    if (!m[5].trim()) {
+      if (m[1]) return this.outdent(editor);
+      // An outline written flat steps out by its number: 1.2. to 2., 1.1.2. to 1.2.
+      if (it.kind === 'outline') {
+        const parts = m[2].split('.');
+        this.remark(editor, it, '', nextMarker(parts.slice(0, -1).join('.')));
+        return true;
+      }
+      if (!near.sibling) return false;
+      editor.replaceRange('', { line: at.line, ch: 0 }, { line: at.line, ch: line.length });
+      return true;
+    }
+    const head = `${m[1]}${nextMarker(m[2], near.sibling)}${m[3]}${m[4]}`;
+    // The items after it count on from the new one: read as if it were in, written in the text as it is.
+    const lineOf = (i) => (i <= at.line ? editor.getLine(i) : i === at.line + 1 ? head : editor.getLine(i - 1));
+    const after = renumber(lineOf, editor.lineCount() + 1, at.line + 1).map((c) => Object.assign(c, { line: c.line - 1 }));
+    this.write(editor, [{ line: at.line, from: line.length, to: line.length, text: `\n${head}` }].concat(after), { line: at.line + 1, ch: head.length });
+    return true;
+  }
+
+  /** One indent in: the item carries on the list at that depth, or starts one under the item above. */
+  indent(editor) {
+    const it = this.item(editor);
+    if (!it || !it.near.sibling) return false;
+    const vault = this.app.vault;
+    const config = (k) => (vault && typeof vault.getConfig === 'function' ? vault.getConfig(k) : undefined);
+    const unit = config('useTab') === false ? ' '.repeat(config('tabSize') || 4) : '\t';
+    const indent = it.m[1] + unit;
+    const above = around(editor, it.near.siblingAt, depth(it.m[1])).sibling;
+    this.remark(editor, it, indent, this.nextAt(editor, it.at.line, indent) || firstUnder(it.near.sibling, above));
+    return true;
+  }
+
+  /** One indent out: the item carries on the list it steps back into. */
+  outdent(editor) {
+    const it = this.item(editor);
+    if (!it || !it.m[1]) return false;
+    const indent = it.m[1].replace(/(\t| {1,4})$/, '');
+    const next = this.nextAt(editor, it.at.line, indent);
+    this.remark(editor, it, indent, next && !/^[-*+]$/.test(next) ? next : it.m[2]);
+    return true;
+  }
+
+  /** The marker after the nearest item above line `at` with this indent, read by the one before it. */
+  nextAt(editor, at, indent) {
+    const near = around(editor, at, depth(indent));
+    if (!near.sibling) return null;
+    return nextMarker(near.sibling, around(editor, near.siblingAt, depth(indent)).sibling);
   }
 
   /**

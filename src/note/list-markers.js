@@ -1,9 +1,8 @@
 /* ------------------------------------------------------------------ */
-/* List markers written as text: letters, numerals, outline numbers   */
+/* List markers: letters, roman numerals and outline numbers          */
 /*                                                                     */
-/* What a marker is, and the items around a line, so an older note's   */
-/* markers written as text are drawn as lists; and the counting of     */
-/* letters and numerals a note's numbering labels with.                */
+/* What a marker is, which comes next, and the items around a line,    */
+/* for the lists feature and its part in the editor.                   */
 /* ------------------------------------------------------------------ */
 
 const ROMAN = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
@@ -76,6 +75,47 @@ export function around(editor, at, deep) {
 }
 
 /**
+ * How a marker is read. Some letters are numerals too (i, v, x…), so what
+ * one is depends on the item before it: "i" after "h" is the ninth letter.
+ * `before` is the marker of the item above, if there is one.
+ */
+export function readMarker(marker, before) {
+  if (/^\d+$/.test(marker)) return { kind: 'number', n: Number(marker), upper: false };
+  if (OUTLINE.test(marker)) {
+    const parts = marker.split('.').map(Number);
+    return { kind: 'outline', n: parts[parts.length - 1], parts, upper: false };
+  }
+  if (/^[-*+]$/.test(marker)) return { kind: 'bullet', n: 0, upper: false };
+  const m = marker.toLowerCase();
+  const roman = fromRoman(m);
+  if (before) {
+    const b = readMarker(before);
+    if (b.kind === 'letter' && fromLetters(m) === b.n + 1) return { kind: 'letter', n: fromLetters(m), upper: marker !== m };
+    if (b.kind === 'roman' && roman === b.n + 1) return { kind: 'roman', n: roman, upper: marker !== m };
+  }
+  if (roman && (m.length > 1 || m === 'i')) return { kind: 'roman', n: roman, upper: marker !== m };
+  return { kind: 'letter', n: fromLetters(m), upper: marker !== m };
+}
+
+/** The marker that follows one. */
+export function nextMarker(marker, before) {
+  const r = readMarker(marker, before);
+  if (r.kind === 'number') return String(r.n + 1);
+  if (r.kind === 'outline') return r.parts.slice(0, -1).concat(r.n + 1).join('.');
+  if (r.kind === 'bullet') return marker;
+  const next = r.kind === 'roman' ? toRoman(r.n + 1) : toLetters(r.n + 1);
+  return r.upper ? next.toUpperCase() : next;
+}
+
+/** The first marker of a list under an item: a, then i, then a again; under "I" a capital "A"; under 1.1, 1.1.1. */
+export function firstUnder(parent, before) {
+  const r = parent ? readMarker(parent, before) : { kind: 'number' };
+  if (r.kind === 'outline') return `${parent}.1`;
+  if (r.kind === 'letter') return 'i';
+  return r.kind === 'roman' && r.upper ? 'A' : 'a';
+}
+
+/**
  * Whether a word before a full stop is a marker: one letter, a numeral, or
  * the letters after the item above (z, aa). "Mr. Smith" is no item. An
  * outline number is one with its stop ("1.1."); without one ("1.1") only
@@ -87,6 +127,79 @@ export function isMarker(marker, sibling, stop = '.', parent = null) {
   if (marker.length === 1 || fromRoman(marker)) return true;
   const before = sibling && /^[a-z]+$/i.test(sibling) ? fromLetters(sibling.toLowerCase()) : 0;
   return !!before && fromLetters(marker.toLowerCase()) === before + 1;
+}
+
+// An item as renumbering reads it: a plain number, an outline number or a letter or numeral, and its stop.
+const ENTRY = /^([ \t]*)(\d+(?:\.\d+)*|[a-z]+)([.)]?)[ \t]/i;
+
+function entryOf(line) {
+  const m = ENTRY.exec(line);
+  if (!m) return null;
+  const [, indent, marker, stop] = m;
+  const kind = /^\d+$/.test(marker) ? 'number' : OUTLINE.test(marker) ? 'outline' : 'letter';
+  if (!stop && kind !== 'outline') return null;
+  return { indent, marker, stop, kind, at: indent.length, end: indent.length + marker.length };
+}
+
+/** An outline counted on from line `at`: each item one after the item before it at its level, its number under its parent's. */
+function renumberOutline(lineOf, count, at, first) {
+  const changes = [];
+  let cur = first.marker.split('.').map(Number);
+  let written = first.marker;
+  for (let i = at + 1; i < count; i++) {
+    const line = lineOf(i);
+    if (!line.trim()) break;
+    const e = entryOf(line);
+    // A line with no number is more of the item above where it is indented (words, a lettered list under it), the list's end where it isn't.
+    if (!e || e.kind === 'letter') {
+      if (/^[ \t]/.test(line)) continue;
+      break;
+    }
+    if (e.kind === 'outline' && !e.stop && !followsInOutline(written, e.marker)) break;
+    written = e.marker;
+    const parts = e.marker.split('.').map(Number);
+    const k = parts.length;
+    const next = k <= cur.length ? cur.slice(0, k - 1).concat(cur[k - 1] + 1) : k === cur.length + 1 ? cur.concat(1) : parts;
+    const text = next.join('.');
+    if (text !== e.marker) changes.push({ line: i, from: e.at, to: e.end, text });
+    cur = next;
+  }
+  return changes;
+}
+
+/** Letters or numerals counted on from line `at`, among the items at its indent; those deeper are left as they are. */
+function renumberLetters(lineOf, count, at, first) {
+  const changes = [];
+  const d = depth(first.indent);
+  let prev = first.marker;
+  let before = around({ getLine: lineOf }, at, d).sibling;
+  let written = first.marker;
+  for (let i = at + 1; i < count; i++) {
+    const line = lineOf(i);
+    if (!line.trim()) break;
+    const deep = depth(/^[ \t]*/.exec(line)[0]);
+    if (deep > d) continue;
+    if (deep < d) break;
+    const e = entryOf(line);
+    if (!e || e.kind !== 'letter' || !isMarker(e.marker, written)) break;
+    written = e.marker;
+    const next = nextMarker(prev, before);
+    if (next !== e.marker) changes.push({ line: i, from: e.at, to: e.end, text: next });
+    before = prev;
+    prev = next;
+  }
+  return changes;
+}
+
+/**
+ * The markers after line `at` written again so its list counts on from it,
+ * as Obsidian numbers its own lists again when an item comes in or moves:
+ * [{ line, from, to, text }]. `lineOf(i)` gives a line, `count` how many.
+ */
+export function renumber(lineOf, count, at) {
+  const first = entryOf(lineOf(at));
+  if (!first) return [];
+  return first.kind === 'letter' ? renumberLetters(lineOf, count, at, first) : renumberOutline(lineOf, count, at, first);
 }
 
 /**
