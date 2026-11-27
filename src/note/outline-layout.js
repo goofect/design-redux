@@ -139,19 +139,13 @@ export class OutlineLayout {
   }
 
   /**
-   * The items both the line above a blank line and the line below it are in, outermost first:
-   * none when the blank line is not inside a list laid out here.
+   * The items a blank line of spaces is under, by its own indent, outermost first, as a line of
+   * words there would be: so the guides follow the indent as Enter keeps it and Tab deepens it.
+   * None at the margin, or outside a list laid out here.
    */
-  blankAncestors(n) {
-    let p = n - 1;
-    while (p >= 0 && n - p < REACH && this.kind(p).kind === 'blank') p--;
-    let q = n + 1;
-    while (q < this.count && q - n < REACH && this.kind(q).kind === 'blank') q++;
-    if (p < 0 || q >= this.count || this.kind(p).kind === 'blank' || this.kind(q).kind === 'blank' || !this.ours(p) || !this.ours(q)) return [];
-    const chain = (x) => this.ancestors(x).concat(this.isItem(x) ? [x] : []);
-    const [above, below] = [chain(p), chain(q)];
-    const out = [];
-    for (let i = 0; i < Math.min(above.length, below.length) && above[i] === below[i]; i++) out.push(above[i]);
-    return out;
+  blankUnder(n) {
+    const p = this.parent(n);
+    if (p < 0 || !(this.kind(p).kind === 'typed' || this.ours(p) || this.hasTyped(p))) return [];
+    return this.ancestors(p).concat([p]);
   }
 }

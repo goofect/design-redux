@@ -457,11 +457,36 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       Object.assign(plugins.designRedux.settings, { look: 'redux', lookScope: 'plugin' });
       await plugins.designRedux.saveSettings();
     });
+    // Typing, as the person types: Enter after a line of words, Tab twice, words; Enter after an item's last words. The guides are
+    // audited after every key, in both modes.
+    for (const mode of [{ mode: 'source', source: false }, { mode: 'source', source: true }]) {
+      await browser.executeObsidian(async ({ app }, text, mode) => {
+        const path = 'Politics/Audit typing.md';
+        let file = app.vault.getAbstractFileByPath(path);
+        if (file) await app.vault.modify(file, text);
+        else file = await app.vault.create(path, text);
+        const leaf = app.workspace.getLeaf(false);
+        await leaf.setViewState({ type: 'markdown', state: { file: file.path, ...mode } });
+        const e = app.workspace.activeEditor.editor;
+        const n = e.getValue().split('\n').findIndex((l) => l.includes('are shared.'));
+        e.setCursor({ line: n, ch: e.getLine(n).length });
+        e.focus();
+        await new Promise((r) => setTimeout(r, 400));
+      }, GUIDE_NOTES.tabs, mode);
+      const steps = [['Enter'], ['Tab'], ['Tab'], ['W', 'o', 'r', 'd'], ['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'End', 'Enter']];
+      for (const keys of steps) {
+        await browser.keys(keys);
+        await browser.pause(250);
+        const got = await browser.executeObsidian(auditGuides);
+        const where = `typing in ${mode.source ? 'source' : 'live preview'}, after ${keys.join(' ')}`;
+        got.violations.forEach((v) => found.push({ where, ...v }));
+      }
+    }
     if (found.length) console.log(JSON.stringify(found, null, 1));
     expect(found).toEqual([]);
   });
 
-  it('leaves the blank lines of a list written as text as gaps: no guide crosses one, Obsidian\'s at its own tab stops neither, and the caret and typing are Obsidian\'s', async function () {
+  it('gives a blank line of a list written as text the guides of its indent, an empty one none, Obsidian\'s at its own tab stops neither, and leaves the caret and typing Obsidian\'s', async function () {
     // As the person writes it: blank lines between an item's parts, some empty, some only the indent.
     const text = '2. [[Division]]\n\ti. **Summary**\n\tWords.\n\n\t2.1. [[Concurrent]]\n\t\ti. **Summary**\n\t\tMore words.\n\t\t\n\t\tii. **Internal**\n\t\t\n\t\tiii. **Upstream**\n\nAfter.\n';
     await browser.executeObsidian(async ({ app }, text) => {
@@ -484,9 +509,9 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
         line: Math.round(lines.find((l) => l.textContent.includes('Words')).getBoundingClientRect().height),
       };
     }), (v) => v.lines >= 13);
-    // The item lines keep their guides; no blank line has one.
+    // The item lines keep their guides; a blank line of tabs under 2.1. has its two (2. and 2.1.), an empty one none.
     expect(seen.items.some((g) => g.length)).toBe(true);
-    expect(seen.blank.map((g) => g.length)).toEqual([0, 0, 0, 0, 0]);
+    expect(seen.blank.map((g) => g.length)).toEqual([0, 2, 2, 0, 0]);
     expect(seen.obsidian.every((n) => n === 0)).toBe(true);
     seen.heights.forEach((h) => expect([h, h >= seen.line * 0.8]).toEqual([h, true]));
     await shot('guides-blank-gaps');

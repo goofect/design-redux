@@ -4,7 +4,8 @@
 // hide itself. What is checked, on every line drawn:
 //   1. a line in a list has one guide for each item it is under, and no other;
 //   2. every guide stands the same distance from its item's marker (the plugin's and Obsidian's alike);
-//   3. a blank line, and a line under no item, has none;
+//   3. a blank line of only its indent has the guides a line of words with that indent would have (so they follow
+//      Enter and Tab); an empty line, and a line under no item, has none;
 //   4. the outline shows: a line under an item starts to the right of that item's marker (an outline collapsed
 //      to one edge keeps its guides beside its markers, and only this catches it).
 // Returns { offset, violations: [{ line, text, why, ... }] }.
@@ -24,7 +25,10 @@ export function auditGuides({ app }) {
       if (blank(j)) continue;
       const d = depth(text(j));
       if (d < cur) {
-        if (!item(j)) break; // under words that are no item: not a list here
+        if (!item(j)) {
+          if (!d) break; // under prose at the margin: no list here
+          continue; // the words of an item: what is under them is under that item
+        }
         out.unshift(j);
         cur = d;
       }
@@ -67,7 +71,7 @@ export function auditGuides({ app }) {
   for (let i = 0; i < doc.lines; i++) {
     const el = lineEl(i);
     if (!el) continue;
-    seen.push({ i, el, under: blank(i) ? [] : ancestors(i), xs: guides(el) });
+    seen.push({ i, el, under: blank(i) && !lead(text(i)).length ? [] : ancestors(i), xs: guides(el) });
   }
   // The distance a guide stands from its item's marker: the one most guides keep.
   const tally = new Map();
@@ -76,8 +80,8 @@ export function auditGuides({ app }) {
   const violations = [];
   const say = (i, why, extra = {}) => violations.push({ line: i + 1, text: text(i).replace(/\t/g, '→'), why, ...extra });
   seen.forEach(({ i, under, xs }) => {
-    if (blank(i)) { if (xs.length) say(i, 'a guide crosses a blank line', { guides: xs.length }); return; }
-    if (under.length) {
+    if (blank(i) && !under.length) { if (xs.length) say(i, 'a guide crosses an empty line', { guides: xs.length }); return; }
+    if (under.length && !blank(i)) {
       const own = markerX(i);
       const parent = markerX(under[under.length - 1]);
       if (!(own > parent + 4)) say(i, `starts at ${Math.round(own - parent)}px from the marker of the item it is under, not to its right`, { item: under[under.length - 1] + 1 });

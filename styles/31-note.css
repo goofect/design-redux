@@ -116,11 +116,12 @@
 
 .dr-indent-guide {
   --dr-at: 0px; /* where the item it stands for starts, set by the script */
+  --dr-guide-width: var(--indentation-guide-width); /* the editor's; set by the script on a line that gives Obsidian's guides none */
   position: absolute;
   top: 0;
   bottom: 0;
   inset-inline-start: calc(var(--dr-at) + var(--indentation-guide-editing-indent));
-  border-inline-end: var(--indentation-guide-width) solid var(--indentation-guide-color);
+  border-inline-end: var(--dr-guide-width) solid var(--indentation-guide-color);
 }
 
 .dr-list-prefix {

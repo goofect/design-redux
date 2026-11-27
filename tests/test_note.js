@@ -501,20 +501,23 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class]);
     assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1'], [0, 5, 'dr-list-prefix cm-formatting-list cm-formatting-list-ol']]);
 
-    // A blank line inside such a list is a gap: no guide crosses it. Its spaces stay text, and the line gives Obsidian's guides on them no width.
-    const outline = '2. Division\n\ti. Summary\n\tWords\n\n\t2.1. Enumerated\n\t\ti. Summary\n\t\t\n\t\tii. Internal\n\nAfter';
+    // A blank line of spaces in such a list has the guides a line of words with that indent would have, so Enter (which keeps
+    // the indent) and Tab (which deepens it) bring them; its spaces stay text, and the line gives Obsidian's guides on them no
+    // width. An empty line, at the margin, is a gap.
+    const outline = '2. Division\n\ti. Summary\n\tWords\n\n\t2.1. Enumerated\n\t\ti. Summary\n\t\t\n\t\tii. Internal\n\nAfter\n\t\t\t';
     const lines = outline.split('\n');
     const layout = new dr.OutlineLayout((i) => lines[i] || '', lines.length, (t) => t.length * 10);
-    assert.deepStrictEqual([layout.blankAncestors(3), layout.blankAncestors(6), layout.blankAncestors(8)], [[0], [0, 4], []]);
+    assert.deepStrictEqual([layout.blankUnder(3), layout.blankUnder(6), layout.blankUnder(8)], [[], [0, 4], []]);
     const at = (n) => lines.slice(0, n).reduce((sum, l) => sum + l.length + 1, 0);
     const blankLines = [];
     const guidesOnBlank = [];
     for (let it = dr.itemLines(EditorState.create({ doc: outline }), 0, outline.length, (t) => t.length * 10, 4).iter(); it.value; it.next()) {
       if (it.value.spec.class === 'dr-blank-line') blankLines.push(it.from);
-      if (it.value.spec.widget && [3, 6, 8].some((n) => it.from >= at(n) && it.from <= at(n) + lines[n].length) && (it.value.spec.widget.guides || []).length) guidesOnBlank.push(it.from);
+      const w = it.value.spec.widget;
+      if (w && w.guides && [3, 6, 8, 10].some((n) => it.from >= at(n) && it.from <= at(n) + lines[n].length)) guidesOnBlank.push([it.from, w.guides.length]);
     }
     assert.deepStrictEqual(blankLines, [at(6)]);
-    assert.deepStrictEqual(guidesOnBlank, [], 'a guide crosses a blank line');
+    assert.deepStrictEqual(guidesOnBlank, [[at(6) + 2, 2]], 'a blank line of spaces lacks its guides, or another blank line has some');
   });
 
   await check('reading view: a code block Markdown made of lines indented under a list item is rendered as the note\'s text, a run at a time at its indent; fenced code stays code', async () => {
