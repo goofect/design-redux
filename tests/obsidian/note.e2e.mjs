@@ -1,6 +1,6 @@
 // The note and the graph in the real app: pages in reading view, the 3D graph, routes on the real graph.
 import { browser, expect } from '@wdio/globals';
-import { GUIDE_NOTES, auditGuides } from './guides.mjs';
+import { GUIDE_NOTES, OLD_NOTES, auditGuides } from './guides.mjs';
 import { readUntil, shot, suite } from './helpers.mjs';
 
 /** In the active note, what stands round its title, in order, and how far its head moves when the text is scrolled 200px. */
@@ -428,8 +428,8 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
 
   it('draws an outline\'s guides as the outline means them, in every look and mode: one under each item a line is under, all the same distance from their markers, none across a blank line', async function () {
     const found = [];
-    for (const [name, text] of Object.entries(GUIDE_NOTES)) {
-      for (const look of [['redux', 'plugin'], ['redux', 'window'], ['theme', 'plugin']]) {
+    for (const [name, text] of Object.entries({ ...GUIDE_NOTES, ...OLD_NOTES })) {
+      for (const look of OLD_NOTES[name] ? [['theme', 'plugin']] : [['redux', 'plugin'], ['redux', 'window'], ['theme', 'plugin']]) {
         for (const mode of [{ mode: 'source', source: false }, { mode: 'source', source: true }]) for (const cursorAt of ['', 'ii. **', '\te']) {
           await browser.executeObsidian(async ({ app, plugins }, text, look, mode, name, cursorAt) => {
             Object.assign(plugins.designRedux.settings, { look: look[0], lookScope: look[1] });
@@ -484,6 +484,42 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     }
     if (found.length) console.log(JSON.stringify(found, null, 1));
     expect(found).toEqual([]);
+  });
+
+  it('checks a note\'s indent guides by command: nothing to mend on a sound one; a broken one listed, with a report that shows each line\'s indent', async function () {
+    await browser.executeObsidian(async ({ app }, text) => {
+      const path = 'Politics/Audit command.md';
+      let file = app.vault.getAbstractFileByPath(path);
+      if (file) await app.vault.modify(file, text);
+      else file = await app.vault.create(path, text);
+      await app.workspace.getLeaf(false).setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false } });
+      await new Promise((r) => setTimeout(r, 500));
+      app.commands.executeCommandById('design-redux:check-guides');
+    }, GUIDE_NOTES.tabs);
+    const sound = await readUntil(() => browser.execute(() => { const d = document.querySelector('dialog.dr-sheet'); return d ? d.textContent : ''; }), (t) => t.includes('INDENT GUIDES') || t.includes('Indent guides'));
+    expect(sound).toContain('Nothing to mend');
+    await browser.keys(['Escape']);
+    // Broken on purpose: the plugin's guides hidden, as a theme or an old snippet might.
+    const broken = await browser.executeObsidian(async ({ app, plugins }) => {
+      const style = document.head.appendChild(document.createElement('style'));
+      style.textContent = '.dr-indent-guide { display: none }';
+      await new Promise((r) => setTimeout(r, 200));
+      const got = plugins.designRedux.features.find((f) => f.constructor.name === 'GuideCheck').check();
+      const sheet = document.querySelector('dialog.dr-sheet');
+      const rows = sheet ? sheet.querySelectorAll('.dr-row').length : 0;
+      const report = [];
+      const clip = navigator.clipboard.writeText;
+      navigator.clipboard.writeText = async (t) => void report.push(t);
+      sheet.querySelector('.dr-sheet-actions .dr-button').click();
+      await new Promise((r) => setTimeout(r, 200));
+      navigator.clipboard.writeText = clip;
+      style.remove();
+      return { problems: got.violations.length, rows, report: report[0] || '' };
+    });
+    expect(broken.problems).toBeGreaterThan(5);
+    expect(broken.rows).toBeGreaterThan(5);
+    expect(broken.report).toMatch(/Line \d+: \d guides? for the \d items? it is under\n  →/);
+    expect(broken.report).toContain('Indentation guides: on');
   });
 
   it('gives a blank line of a list written as text the guides of its indent, an empty one none, Obsidian\'s at its own tab stops neither, and leaves the caret and typing Obsidian\'s', async function () {

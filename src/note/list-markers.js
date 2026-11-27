@@ -35,9 +35,9 @@ export function fromLetters(text) {
 }
 
 // An item: a letter or numeral and its stop ("a.", "iv)"), or an outline number ("1.1.", "2.3.1"), its stop if it has one.
-export const LIST_ITEM = /^([ \t]*)([a-z]+(?=[.)])|\d+(?:\.\d+)+)([.)]?)([ \t]+)(.*)$/i;
+export const LIST_ITEM = /^([ \t\u00a0]*)([a-z]+(?=[.)])|\d+(?:\.\d+)+)([.)]?)([ \t]+)(.*)$/i;
 // Any item one of these can sit beside or under: a dash, a number, an outline number, a letter or numeral.
-const ANY_ITEM = /^([ \t]*)([-*+]|\d+(?:\.\d+)+[.)]?|\d+[.)]|[a-z]+[.)])[ \t]/i;
+const ANY_ITEM = /^([ \t\u00a0]*)([-*+]|\d+(?:\.\d+)+[.)]?|\d+[.)]|[a-z]+[.)])[ \t]/i;
 const OUTLINE = /^\d+(?:\.\d+)+$/;
 
 /**
@@ -53,7 +53,8 @@ export function followsInOutline(before, marker) {
 }
 
 /** How deep a line's indent is, a tab as four spaces. */
-export const depth = (ws) => ws.replace(/\t/g, '    ').length;
+// An indent's width in columns, a tab to the next stop of four (as Markdown and the editor read it), so spaces before a tab don't add to it.
+export const depth = (ws) => { let d = 0; for (const c of ws) d += c === '\t' ? 4 - (d % 4) : 1; return d; };
 
 /**
  * The items around line `at` for an item `deep` in: `sibling`, the marker of
@@ -64,7 +65,7 @@ export function around(editor, at, deep) {
     const line = editor.getLine(i);
     if (!line.trim()) continue;
     const m = ANY_ITEM.exec(line);
-    const d = depth(/^[ \t]*/.exec(line)[0]);
+    const d = depth(/^[ \t\u00a0]*/.exec(line)[0]);
     // An indented line of words is more of an item above it (its summary, its paragraph): read on past it. Words at the margin end the list.
     if (!m && d > 0 && d <= deep) continue;
     if (d < deep) return { sibling: null, parent: m ? m[2].replace(/[.)]$/, '') : null };
@@ -124,7 +125,7 @@ export function isMarker(marker, sibling, stop = '.', parent = null) {
 }
 
 // An item as renumbering reads it: a plain number, an outline number or a letter or numeral, and its stop.
-const ENTRY = /^([ \t]*)(\d+(?:\.\d+)*|[a-z]+)([.)]?)[ \t]/i;
+const ENTRY = /^([ \t\u00a0]*)(\d+(?:\.\d+)*|[a-z]+)([.)]?)[ \t]/i;
 
 /**
  * Whether a blank line at `i` is inside a list: what comes after it, past
@@ -134,7 +135,7 @@ const ENTRY = /^([ \t]*)(\d+(?:\.\d+)*|[a-z]+)([.)]?)[ \t]/i;
 function blankWithin(lineOf, count, i) {
   for (let k = i + 1; k < count; k++) {
     const line = lineOf(k);
-    if (line.trim()) return /^[ \t]/.test(line);
+    if (line.trim()) return /^[ \t\u00a0]/.test(line);
   }
   return false;
 }
@@ -162,7 +163,7 @@ function renumberOutline(lineOf, count, at, first) {
     const e = entryOf(line);
     // A line with no number is more of the item above where it is indented (words, a lettered list under it), the list's end where it isn't.
     if (!e || e.kind === 'letter') {
-      if (/^[ \t]/.test(line)) continue;
+      if (/^[ \t\u00a0]/.test(line)) continue;
       break;
     }
     if (e.kind === 'outline' && !e.stop && !followsInOutline(written, e.marker)) break;
@@ -190,7 +191,7 @@ function renumberLetters(lineOf, count, at, first) {
       if (blankWithin(lineOf, count, i)) continue;
       break;
     }
-    const deep = depth(/^[ \t]*/.exec(line)[0]);
+    const deep = depth(/^[ \t\u00a0]*/.exec(line)[0]);
     if (deep > d) continue;
     if (deep < d) break;
     const e = entryOf(line);

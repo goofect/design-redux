@@ -15,8 +15,8 @@
 import { around, depth, isMarker, LIST_ITEM } from './list-markers.js';
 
 // An item of Obsidian's own: a dash, a star, a plus, or a number and its stop.
-const OWN = /^[ \t]*([-*+]|\d{1,9}[.)])([ \t]+)/;
-const lead = (text) => depth(/^[ \t]*/.exec(text)[0]);
+const OWN = /^[ \t\u00a0]*([-*+]|\d{1,9}[.)])([ \t]+)/;
+const lead = (text) => depth(/^[ \t\u00a0]*/.exec(text)[0]);
 const REACH = 400;
 
 /** A place as CSS: pixels, then insets (Obsidian's list inset), then indents (a tab's width). */

@@ -95,7 +95,7 @@ export class Indent extends WidgetType {
  * `inset`: what Obsidian draws before the text that the indent gives back.
  */
 export function layLine(out, layout, line, n, width, tab, guides, extra = '', inset = '') {
-  const ws = /^[ \t]*/.exec(line.text)[0];
+  const ws = /^[ \t\u00a0]*/.exec(line.text)[0];
   const k = layout.kind(n - 1);
   const start = layout.start(n - 1);
   const words = placeCss(layout.words(n - 1));
@@ -125,7 +125,7 @@ export function itemLines(state, from, to, width, tab = 4, guides = true) {
   const layout = new OutlineLayout(lines.getLine, doc.lines, width);
   for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
     const line = doc.line(n);
-    const ws = /^[ \t]*/.exec(line.text)[0];
+    const ws = /^[ \t\u00a0]*/.exec(line.text)[0];
     if (!line.text.trim()) {
       // A blank line of spaces in a list laid out here: the guides a line of words there would have, by its indent, so they
       // follow Enter (which keeps the indent) and Tab (which deepens it). Its spaces stay text (the caret goes into them,
@@ -216,7 +216,7 @@ export function numberedLines(state, from, to, numbering, width, tab = 4) {
     const label = labelOf(numbering, pathAt(getLine, n - 1), m[3]);
     const typed = `${m[2]}${m[3]}`;
     if (label === typed) continue;
-    const space = /^[ \t]*/.exec(line.text.slice(m[0].length))[0];
+    const space = /^[ \t\u00a0]*/.exec(line.text.slice(m[0].length))[0];
     const start = line.from + m[1].length;
     const end = start + typed.length + space.length;
     const shown = reveal(start, end) ? typed : label;

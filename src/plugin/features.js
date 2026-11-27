@@ -19,10 +19,11 @@ import { Maps } from '../maps/map-view.js';
 import { PropertyClipboard } from '../tools/clipboard.js';
 import { ActionsMenu, Diagnostics, FullPane, MenuFilter } from '../tools/extras.js';
 import { Graph3D } from '../tools/graph-3d.js';
+import { GuideCheck } from '../tools/guide-check.js';
 import { GraphFilter, GraphRoutes } from '../tools/graph-routes.js';
 import { PropertyTools } from '../tools/property-tools.js';
 import { PropertyRules } from '../tools/rules.js';
 import { PropertySchemas } from '../tools/schemas.js';
 
 export const FEATURES = [Appearance, Library, AlbumRefactor, AlbumProperty, SavedViews, LibraryCheck, NotePage, NotePages, Footnotes, NoteHtml, MarkedLists, NoteOut,
-  PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, FullPane, Diagnostics, Backup];
+  PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, FullPane, Diagnostics, GuideCheck, Backup];

@@ -21,8 +21,8 @@ import { layLine } from './lists-editor.js';
 import { OutlineLayout, placeCss } from './outline-layout.js';
 
 // A list item of any kind: a dash, a number, an outline number, a letter or numeral.
-const LISTISH = /^[ \t]*(?:[-*+]|\d+(?:\.\d+)*[.)]?|[a-z]+[.)])[ \t]/i;
-const lead = (line) => depth(/^[ \t]*/.exec(line)[0]);
+const LISTISH = /^[ \t\u00a0]*(?:[-*+]|\d+(?:\.\d+)*[.)]?|[a-z]+[.)])[ \t]/i;
+const lead = (line) => depth(/^[ \t\u00a0]*/.exec(line)[0]);
 
 /** Lines in runs split at blank lines. */
 function groupsOf(lines) {
@@ -49,7 +49,7 @@ export function renderAsText(app, root, lines, sourcePath, component, levelOf = 
     part.className = 'dr-as-text';
     part.style.setProperty('--dr-indent', String(Math.max(0, levelOf(group, i))));
     // Lines after the first carry on its paragraph, whatever their indent: Markdown never makes them code.
-    MarkdownRenderer.render(app, [group[0].replace(/^[ \t]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
+    MarkdownRenderer.render(app, [group[0].replace(/^[ \t\u00a0]+/, '')].concat(group.slice(1)).join('\n'), part, sourcePath, component);
   });
 }
 
@@ -58,7 +58,7 @@ function underList(lineAt, n) {
   for (let i = n - 1; i >= 0; i--) {
     const text = lineAt(i);
     if (!text.trim()) continue;
-    return /^[ \t]/.test(text) || LISTISH.test(text);
+    return /^[ \t\u00a0]/.test(text) || LISTISH.test(text);
   }
   return false;
 }
@@ -124,7 +124,7 @@ class AsText extends WidgetType {
     }
     const said = part.appendChild(doc.createElement('span'));
     said.className = 'dr-as-text-words';
-    MarkdownRenderer.render(this.app, this.text.replace(/^[ \t]+/, '').slice(head.length), said, this.path, root.drComponent);
+    MarkdownRenderer.render(this.app, this.text.replace(/^[ \t\u00a0]+/, '').slice(head.length), said, this.path, root.drComponent);
     root.addEventListener('mousedown', (e) => {
       const link = e.target.closest && e.target.closest('a.internal-link');
       if (link) {
@@ -213,7 +213,7 @@ export function codeAsTextReading(app, root, ctx) {
     if (at < 0) return;
     for (let i = at - 1; i >= 0; i--) {
       if (!source[i].trim()) continue;
-      if (/^[ \t]*(```|~~~)/.test(source[i])) return;
+      if (/^[ \t\u00a0]*(```|~~~)/.test(source[i])) return;
       break;
     }
     // Each run at its indent in the note, counted from the item the block is in: the code's own lines lose that indent.
