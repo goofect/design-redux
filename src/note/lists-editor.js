@@ -24,8 +24,8 @@ import { OutlineLayout, placeCss } from './outline-layout.js';
 
 // The marker as Obsidian marks a number of its own lists: grey, set in by the live preview's inset.
 const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-formatting-list-ol' });
-// A blank line of spaces in a list laid out here: Obsidian's guides on its spaces (at its tab stops) given no width, through
-// its own variable on the line; the plugin's guides on it carry the editor's own width (Indent's `own`).
+// A blank line of spaces in a list laid out here: Obsidian's guides on its spaces (at its tab stops) given no width,
+// through its own variable on the line.
 const BLANK_LINE = Decoration.line({ class: 'dr-blank-line', attributes: { style: '--indentation-guide-width: 0px' } });
 
 /**
@@ -53,12 +53,11 @@ function ignored(state, line, indent) {
  */
 /** A line's indent, drawn as wide as the layout says, with Obsidian's indentation guide under each item it is in. */
 export class Indent extends WidgetType {
-  constructor(width, guides, own = false) {
+  constructor(width, guides) {
     super();
     this.width = width;
     this.guides = guides;
-    this.own = own;
-    this.key = [width, own].concat(guides).join('|');
+    this.key = [width].concat(guides).join('|');
   }
 
   eq(other) {
@@ -70,13 +69,10 @@ export class Indent extends WidgetType {
     const span = doc.createElement('span');
     span.className = 'dr-indent';
     span.style.setProperty('--dr-x', this.width);
-    // On a line that gives Obsidian's guides no width, the plugin's take the width the editor gives them.
-    const width = this.own ? getComputedStyle(view.contentDOM).getPropertyValue('--indentation-guide-width').trim() || '1px' : null;
     this.guides.forEach((at) => {
       const guide = span.appendChild(doc.createElement('span'));
       guide.className = 'dr-indent-guide';
       guide.style.setProperty('--dr-at', at);
-      if (width) guide.style.setProperty('--dr-guide-width', width);
     });
     return span;
   }
@@ -84,6 +80,29 @@ export class Indent extends WidgetType {
   ignoreEvent() {
     return false;
   }
+}
+
+/**
+ * Lays one line of a list laid out here, as typed: hung under the words of
+ * the item it is in, its indent drawn that wide with a guide under each item
+ * it is in (where `guides`), an item's marker in Obsidian's marker box. The
+ * one way such a line is drawn: here, and where Markdown makes lines of the
+ * list code and they show as typed (outline-text.js). `extra`: a class more;
+ * `inset`: what Obsidian draws before the text that the indent gives back.
+ */
+export function layLine(out, layout, line, n, width, tab, guides, extra = '', inset = '') {
+  const ws = /^[ \t]*/.exec(line.text)[0];
+  const k = layout.kind(n - 1);
+  const start = layout.start(n - 1);
+  const words = placeCss(layout.words(n - 1));
+  const mark = k.kind === 'typed' ? width(k.head) : 0;
+  const style = `--dr-mark: ${mark}px; padding-inline-start: ${words}; text-indent: calc(-1 * ${words})`;
+  const cls = (k.kind === 'typed' ? `dr-marked-item HyperMD-list-line HyperMD-list-line-${Math.ceil(depth(ws) / tab) + 1}` : 'dr-outline-line') + (extra ? ` ${extra}` : '');
+  out.add(line.from, line.from, Decoration.line({ class: cls, attributes: { style } }));
+  const marks = guides ? layout.ancestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
+  const indent = inset ? `calc(${placeCss(start)} - ${inset})` : placeCss(start);
+  if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: new Indent(indent, marks) }));
+  if (k.kind === 'typed') out.add(line.from + ws.length, line.from + ws.length + k.head.length, PREFIX);
 }
 
 /**
@@ -104,36 +123,23 @@ export function itemLines(state, from, to, width, tab = 4, guides = true) {
     const line = doc.line(n);
     const ws = /^[ \t]*/.exec(line.text)[0];
     if (!line.text.trim()) {
-      // A blank line inside a list laid out here: the guides of the items around it go on through it, where those
-      // items start, drawn after its spaces. Its spaces stay text, so the caret goes into them and after them as
-      // the person expects and typing keeps the indent; Obsidian's own guides on them, at its tab stops rather than
-      // where the items start, are given no width there (through its own variable, on the line).
-      const marks = guides ? layout.blankAncestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
-      if (marks.length) {
-        if (ws.length) out.add(line.from, line.from, BLANK_LINE);
-        out.add(line.to, line.to, Decoration.widget({ widget: new Indent('0px', marks, ws.length > 0), side: 1 }));
-      }
+      // A blank line inside a list laid out here is a gap: no guide crosses it. Its spaces stay text (the caret goes into
+      // them, typing keeps the indent), and Obsidian's own guides on them, at its tab stops rather than where the
+      // items start, are given no width there, through its own variable on the line.
+      if (ws.length && guides && layout.blankAncestors(n - 1).length) out.add(line.from, line.from, BLANK_LINE);
       continue;
     }
     if (ignored(state, line, ws.length)) continue;
     const k = layout.kind(n - 1);
     if (layout.ours(n - 1)) {
-      const start = layout.start(n - 1);
-      const words = placeCss(layout.words(n - 1));
-      const mark = k.kind === 'typed' ? width(k.head) : 0;
-      const style = `--dr-mark: ${mark}px; padding-inline-start: ${words}; text-indent: calc(-1 * ${words})`;
-      const cls = k.kind === 'typed' ? `dr-marked-item HyperMD-list-line HyperMD-list-line-${Math.ceil(depth(ws) / tab) + 1}` : 'dr-outline-line';
-      out.add(line.from, line.from, Decoration.line({ class: cls, attributes: { style } }));
-      const marks = guides ? layout.ancestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
-      if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: new Indent(placeCss(start), marks) }));
-      if (k.kind === 'typed') out.add(line.from + ws.length, line.from + ws.length + k.head.length, PREFIX);
+      layLine(out, layout, line, n, width, tab, guides);
       continue;
     }
     if (k.kind !== 'typed') continue;
     // At the margin, or among nothing laid out: indent levels, a tab or a tab's width of spaces, each Obsidian's --list-indent wide.
     const levels = Math.ceil(depth(ws) / tab);
     const mark = width(k.head);
-    const hang = `calc(${levels} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--list-padding-inline-start, 0px) + ${mark}px)`;
+    const hang = `calc(${levels} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--dr-inset) + ${mark}px)`;
     const style = `--dr-mark: ${mark}px; --dr-hang: ${hang}; padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))`;
     // Obsidian's list line, a level a step in: its spacing, and its fold arrow placed as on its own numbered items.
     out.add(line.from, line.from, Decoration.line({ class: `dr-marked-item HyperMD-list-line HyperMD-list-line-${levels + 1}`, attributes: { style } }));
@@ -205,8 +211,8 @@ export function numberedLines(state, from, to, numbering, width, tab = 4) {
     const start = line.from + m[1].length;
     const end = start + typed.length + space.length;
     const shown = reveal(start, end) ? typed : label;
-    const hang = `calc(${Math.ceil(depth(m[1]) / tab)} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--list-padding-inline-start, 0px) + ${width(`${shown} `)}px)`;
-    out.add(line.from, line.from, Decoration.line({ attributes: { style: `padding-inline-start: ${hang}; text-indent: calc(-1 * ${hang})` } }));
+    const hang = `calc(${Math.ceil(depth(m[1]) / tab)} * var(--list-indent, ${width(' '.repeat(tab))}px) + var(--dr-inset) + ${width(`${shown} `)}px)`;
+    out.add(line.from, line.from, Decoration.line({ class: 'dr-numbered-line', attributes: { style: `padding-inline-start: ${hang}; text-indent: calc(-1 * ${hang})` } }));
     if (shown === label) out.add(start, end, Decoration.replace({ widget: new Label(`${label}${space || ' '}`) }));
   }
   return out.finish();

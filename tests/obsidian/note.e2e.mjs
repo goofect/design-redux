@@ -1,5 +1,6 @@
 // The note and the graph in the real app: pages in reading view, the 3D graph, routes on the real graph.
 import { browser, expect } from '@wdio/globals';
+import { GUIDE_NOTES, auditGuides } from './guides.mjs';
 import { readUntil, shot, suite } from './helpers.mjs';
 
 /** In the active note, what stands round its title, in order, and how far its head moves when the text is scrolled 200px. */
@@ -425,7 +426,42 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('laid-out');
   });
 
-  it('runs the guides of a list written as text on through its blank lines, where its items start, and none of Obsidian\'s at its own tab stops there', async function () {
+  it('draws an outline\'s guides as the outline means them, in every look and mode: one under each item a line is under, all the same distance from their markers, none across a blank line', async function () {
+    const found = [];
+    for (const [name, text] of Object.entries(GUIDE_NOTES)) {
+      for (const look of [['redux', 'plugin'], ['redux', 'window'], ['theme', 'plugin']]) {
+        for (const mode of [{ mode: 'source', source: false }, { mode: 'source', source: true }]) for (const cursorAt of ['', 'ii. **', '\te']) {
+          await browser.executeObsidian(async ({ app, plugins }, text, look, mode, name, cursorAt) => {
+            Object.assign(plugins.designRedux.settings, { look: look[0], lookScope: look[1] });
+            await plugins.designRedux.saveSettings();
+            const path = `Politics/Audit ${name}.md`;
+            let file = app.vault.getAbstractFileByPath(path);
+            if (file) await app.vault.modify(file, text);
+            else file = await app.vault.create(path, text);
+            const leaf = app.workspace.getLeaf(false);
+            await leaf.openFile(file, { state: mode });
+            await leaf.setViewState({ type: 'markdown', state: { file: file.path, ...mode } });
+            // The cursor where it is drawn differently: on an item, on words among code, or at the top.
+            const at = cursorAt ? text.split('\n').findIndex((l) => l.includes(cursorAt)) : 0;
+            app.workspace.activeEditor.editor.setCursor({ line: Math.max(0, at), ch: 0 });
+            await new Promise((r) => setTimeout(r, 500));
+          }, text, look, mode, name, cursorAt);
+          const got = await browser.executeObsidian(auditGuides);
+          const where = `${name}, look ${look.join('/')}, ${mode.source ? 'source' : 'live preview'}, cursor ${cursorAt || 'at the top'}`;
+          got.violations.forEach((v) => found.push({ where, ...v }));
+          if (got.violations.length) await shot(`guides-audit-${name}-${look.join('-')}-${mode.source ? 'source' : 'live'}`);
+        }
+      }
+    }
+    await browser.executeObsidian(async ({ plugins }) => {
+      Object.assign(plugins.designRedux.settings, { look: 'redux', lookScope: 'plugin' });
+      await plugins.designRedux.saveSettings();
+    });
+    if (found.length) console.log(JSON.stringify(found, null, 1));
+    expect(found).toEqual([]);
+  });
+
+  it('leaves the blank lines of a list written as text as gaps: no guide crosses one, Obsidian\'s at its own tab stops neither, and the caret and typing are Obsidian\'s', async function () {
     // As the person writes it: blank lines between an item's parts, some empty, some only the indent.
     const text = '2. [[Division]]\n\ti. **Summary**\n\tWords.\n\n\t2.1. [[Concurrent]]\n\t\ti. **Summary**\n\t\tMore words.\n\t\t\n\t\tii. **Internal**\n\t\t\n\t\tiii. **Upstream**\n\nAfter.\n';
     await browser.executeObsidian(async ({ app }, text) => {
@@ -447,14 +483,13 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
         heights: blank.map((l) => Math.round(l.getBoundingClientRect().height)),
         line: Math.round(lines.find((l) => l.textContent.includes('Words')).getBoundingClientRect().height),
       };
-    }), (v) => v.lines >= 13 && v.blank.some((g) => g.length));
-    const known = new Set(seen.items.flat());
-    // Every guide on a blank line stands where one stands on the lines around it; the blank lines between the parts have them, the one after the list none.
-    seen.blank.flat().forEach((x) => expect([x, [...known].some((k) => Math.abs(k - x) <= 1)]).toEqual([x, true]));
-    expect(seen.blank.map((g) => g.length)).toEqual([1, 2, 2, 0, 0]);
+    }), (v) => v.lines >= 13);
+    // The item lines keep their guides; no blank line has one.
+    expect(seen.items.some((g) => g.length)).toBe(true);
+    expect(seen.blank.map((g) => g.length)).toEqual([0, 0, 0, 0, 0]);
     expect(seen.obsidian.every((n) => n === 0)).toBe(true);
     seen.heights.forEach((h) => expect([h, h >= seen.line * 0.8]).toEqual([h, true]));
-    await shot('guides-through-blank-lines');
+    await shot('guides-blank-gaps');
     // A gap made with Enter after a line of words: a blank line, the caret on it where the words typed there will stand, not at the margin.
     await browser.executeObsidian(({ app }) => {
       const e = app.workspace.activeEditor.editor;

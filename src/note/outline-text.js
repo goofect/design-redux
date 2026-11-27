@@ -17,7 +17,7 @@ import { syntaxTree } from '@codemirror/language';
 import { RangeSetBuilder, StateField } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType } from '@codemirror/view';
 import { depth } from './list-markers.js';
-import { Indent } from './lists-editor.js';
+import { layLine } from './lists-editor.js';
 import { OutlineLayout, placeCss } from './outline-layout.js';
 
 // A list item of any kind: a dash, a number, an outline number, a letter or numeral.
@@ -158,31 +158,32 @@ export function codeAsTextField(app, pathOf, live, widthOf, guidesOn) {
   const build = (state, runs) => {
     const out = new RangeSetBuilder();
     const doc = state.doc;
-    if (live(state)) {
-      const width = widthOf();
-      const layout = new OutlineLayout((i) => (i >= 0 && i < doc.lines ? doc.line(i + 1).text : ''), doc.lines, width);
-      runs.forEach(({ from, to }) => {
-        // A line at a time, as live preview shows the rest of a note: the line the cursor is on as typed, the others as text.
-        for (let n = from; n <= to; n++) {
-          const line = doc.line(n);
-          if (!line.text.trim()) continue;
-          const start = placeCss(layout.start(n - 1));
-          const ws = /^[ \t]*/.exec(line.text)[0];
-          const guides = guidesOn() ? layout.ancestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
-          if (state.selection.ranges.some((r) => r.from <= line.to && r.to >= line.from)) {
-            // As typed, where the line starts in the layout, a long line hung there: it wraps under its words, not at the margin.
-            out.add(line.from, line.from, Decoration.line({ class: 'dr-as-text-raw', attributes: { style: `padding-inline-start: ${start}; text-indent: calc(-1 * ${start})` } }));
-            if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: new Indent(start, guides) }));
-          } else {
+    const isLive = live(state);
+    const width = widthOf();
+    const layout = new OutlineLayout((i) => (i >= 0 && i < doc.lines ? doc.line(i + 1).text : ''), doc.lines, width);
+    runs.forEach(({ from, to }) => {
+      // A line at a time, as live preview shows the rest of a note: the line the cursor is on as typed, the others as
+      // text. In source mode every line as typed, but where it stands in the outline, with its guides (not at
+      // Obsidian's tab stops, as code).
+      for (let n = from; n <= to; n++) {
+        const line = doc.line(n);
+        if (!line.text.trim()) continue;
+        const start = placeCss(layout.start(n - 1));
+        const guides = guidesOn() ? layout.ancestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
+        if (!isLive || state.selection.ranges.some((r) => r.from <= line.to && r.to >= line.from)) {
+          // As typed, laid out as every line of the list is (lists-editor.js): one way, so its marker and guides stand where theirs do.
+          // In source mode Obsidian draws code's text in an inline-code span padded .3em at its start (a fixed padding, no
+          // variable reaches it): the indent gives that back, so the marker stands where the line's guide expects it.
+          layLine(out, layout, line, n, width, state.tabSize || 4, guidesOn(), 'dr-as-text-raw', isLive ? '' : '0.3em');
+        } else {
             const k = layout.kind(n - 1);
             const head = k.kind === 'typed' ? k.head : '';
             const place = { start, words: placeCss(layout.words(n - 1)), head, mark: head ? width(head) : 0, guides };
-            out.add(line.from, line.to, Decoration.replace({ widget: new AsText(app, line.text, pathOf(state), place), block: true }));
-          }
+          out.add(line.from, line.to, Decoration.replace({ widget: new AsText(app, line.text, pathOf(state), place), block: true }));
         }
-      });
-    }
-    return { runs, live: live(state), deco: out.finish() };
+      }
+    });
+    return { runs, live: isLive, deco: out.finish() };
   };
   return StateField.define({
     create: (state) => build(state, codeRuns(state)),

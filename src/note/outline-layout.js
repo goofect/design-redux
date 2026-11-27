@@ -21,7 +21,7 @@ const REACH = 400;
 
 /** A place as CSS: pixels, then insets (Obsidian's list inset), then indents (a tab's width). */
 export function placeCss(place) {
-  return `calc(${Math.round(place.px * 10) / 10}px + ${place.insets} * var(--list-padding-inline-start, 0px) + ${place.indents} * var(--list-indent))`;
+  return `calc(${Math.round(place.px * 10) / 10}px + ${place.insets} * var(--dr-inset) + ${place.indents} * var(--list-indent))`;
 }
 
 export class OutlineLayout {
@@ -139,9 +139,8 @@ export class OutlineLayout {
   }
 
   /**
-   * A blank line's guides: the items both the line above it and the line below are in, outermost
-   * first, so a guide runs on through the blank lines between an item's parts and stops where its
-   * list does. None when the blank line is not between two lines laid out here.
+   * The items both the line above a blank line and the line below it are in, outermost first:
+   * none when the blank line is not inside a list laid out here.
    */
   blankAncestors(n) {
     let p = n - 1;

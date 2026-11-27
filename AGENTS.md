@@ -112,7 +112,10 @@ something away.
   (WebdriverIO; the app is cached in `.obsidian-cache/`): `npm run
   test:obsidian`, or one spec with `-- --spec tests/obsidian/note.e2e.mjs`.
   What draws in the note's text, the editor or Obsidian's own regions gets
-  an `it` here.
+  an `it` here. Outlines are checked by what a person sees, not by what the
+  layout code means: `tests/obsidian/guides.mjs` audits every guide and
+  indent on screen against the outline's indentation alone, in each look,
+  mode and cursor place; a list drawing change adds its shape to its notes.
 - `manifest.json`, `versions.json` — never edit versions by hand. `README.md`
   — don't update unless asked.
 

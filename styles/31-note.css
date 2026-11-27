@@ -85,6 +85,23 @@
 /* A lettered, roman or outline item's line in the editor is one of Obsidian's list lines (its classes, given by the script),
    and hangs by a style its script sets on the line, after Obsidian's own, the only way past it. Its marker takes Obsidian's
    marker class (grey, the live preview's inset), and is as wide as the hang reckons, the inset in it, so the words start where the wrap does. */
+/* Obsidian's list inset as a length, which the lines' places are reckoned in. Obsidian sets it in source mode to a bare 0, a number,
+   and a number added to a length makes a whole calc() invalid (every indent and hang then falls to nothing): registered as a
+   length, a bare 0 here is 0px. */
+@property --dr-inset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.dr-marked-item,
+.dr-outline-line,
+.dr-numbered-line,
+.dr-as-text,
+.dr-as-text-block {
+  --dr-inset: var(--list-padding-inline-start, 0px);
+}
+
 .dr-marked-item {
   --dr-mark: 0px; /* measured by the script, in the line's style */
 }
@@ -99,19 +116,18 @@
 
 .dr-indent-guide {
   --dr-at: 0px; /* where the item it stands for starts, set by the script */
-  --dr-guide-width: var(--indentation-guide-width); /* the editor's; set by the script on a line that gives Obsidian's guides none */
   position: absolute;
   top: 0;
   bottom: 0;
   inset-inline-start: calc(var(--dr-at) + var(--indentation-guide-editing-indent));
-  border-inline-end: var(--dr-guide-width) solid var(--indentation-guide-color);
+  border-inline-end: var(--indentation-guide-width) solid var(--indentation-guide-color);
 }
 
 .dr-list-prefix {
   display: inline-block;
   font-variant-numeric: normal; /* Obsidian's class sets figures one width, which no canvas measures: the figures as measured */
   box-sizing: border-box;
-  width: calc(var(--dr-mark) + var(--list-padding-inline-start, 0px));
+  width: calc(var(--dr-mark) + var(--dr-inset));
   white-space: pre;
   text-indent: 0;
 }
