@@ -442,6 +442,9 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
         items: lines.filter((l) => l.textContent.trim()).map(xs),
         blank: blank.map(xs),
         obsidian: blank.map((l) => l.querySelectorAll('.cm-indent').length),
+        // A blank line keeps a line's height: it is the gap the person wrote.
+        heights: blank.map((l) => Math.round(l.getBoundingClientRect().height)),
+        line: Math.round(lines.find((l) => l.textContent.includes('Words')).getBoundingClientRect().height),
       };
     }), (v) => v.lines >= 13 && v.blank.some((g) => g.length));
     const known = new Set(seen.items.flat());
@@ -449,7 +452,29 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     seen.blank.flat().forEach((x) => expect([x, [...known].some((k) => Math.abs(k - x) <= 1)]).toEqual([x, true]));
     expect(seen.blank.map((g) => g.length)).toEqual([1, 2, 2, 0, 0]);
     expect(seen.obsidian.every((n) => n === 0)).toBe(true);
+    seen.heights.forEach((h) => expect([h, h >= seen.line * 0.8]).toEqual([h, true]));
     await shot('guides-through-blank-lines');
+    // A gap made with Enter after a line of words: a blank line, the caret on it where the words typed there will stand, not at the margin.
+    await browser.executeObsidian(({ app }) => {
+      const e = app.workspace.activeEditor.editor;
+      const at = e.getValue().split('\n').findIndex((l) => l.includes('More words.'));
+      e.setCursor({ line: at, ch: e.getLine(at).length });
+      e.focus();
+    });
+    await browser.keys(['Enter']);
+    const gap = await readUntil(() => browser.executeObsidian(({ app }) => {
+      // Where CodeMirror draws the caret (a collapsed DOM range beside a widget has no box to measure).
+      const view = app.workspace.activeEditor.editor.cm;
+      const head = view.state.selection.main.head;
+      const caret = view.coordsAtPos(head).left;
+      const words = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-line')).find((l) => l.textContent.includes('More words.'));
+      const range = document.createRange();
+      const text = Array.from(words.querySelectorAll('*')).concat(words).flatMap((n) => Array.from(n.childNodes)).find((n) => n.nodeType === 3 && n.data.includes('More'));
+      range.setStart(text, text.data.indexOf('More'));
+      range.setEnd(text, text.data.indexOf('More') + 1);
+      return Math.round(caret - range.getBoundingClientRect().left);
+    }), (d) => Math.abs(d) <= 2, 3000);
+    expect([gap, Math.abs(gap) <= 2]).toEqual([gap, true]);
   });
 
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {

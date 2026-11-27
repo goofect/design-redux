@@ -507,6 +507,8 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const lines = outline.split('\n');
     const layout = new dr.OutlineLayout((i) => lines[i] || '', lines.length, (t) => t.length * 10);
     assert.deepStrictEqual([layout.blankAncestors(3), layout.blankAncestors(6), layout.blankAncestors(8)], [[0], [0, 4], []]);
+    // A blank line of spaces starts where words typed on it would: under its item's words, not at the margin.
+    assert.deepStrictEqual(layout.blankStart(6), layout.words(4));
     const guidesOf = (from, to) => {
       const marks = [];
       const set = dr.itemLines(EditorState.create({ doc: outline }), 0, outline.length, (t) => t.length * 10, 4);

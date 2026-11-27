@@ -98,10 +98,11 @@ export function itemLines(state, from, to, width, tab = 4, guides = true) {
     const ws = /^[ \t]*/.exec(line.text)[0];
     if (!line.text.trim()) {
       // A blank line inside a list laid out here: the guides of the items around it go on through it, where those
-      // items start (its spaces, if any, are the plugin's indent then, so Obsidian's guides at its own tab stops don't show).
+      // items start. Its spaces, if any, are the plugin's indent then, as wide as the words typed on it would stand
+      // (so the caret waits there, not at the margin), and Obsidian's guides at its own tab stops don't show.
       const marks = guides ? layout.blankAncestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
       if (marks.length) {
-        const indent = new Indent('0px', marks);
+        const indent = new Indent(ws.length ? placeCss(layout.blankStart(n - 1)) : '0px', marks);
         if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: indent }));
         else out.add(line.from, line.from, Decoration.widget({ widget: indent, side: 1 }));
       }
