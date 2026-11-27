@@ -50,7 +50,7 @@ export function rememberSearch(plugin, query) {
 /** The search field and what it finds; while nothing is typed, the last few searches. */
 export function drawSearch(screen, host) {
   const plugin = screen.plugin;
-  const top = el(host, 'div', 'dr-search');
+  const top = el(host, 'search', 'dr-search');
   const results = el(host, 'div', 'dr-search-results');
   const show = (query) => {
     clear(results);

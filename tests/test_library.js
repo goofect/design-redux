@@ -51,6 +51,10 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     const s = sidebar(w);
     const head = s.host.querySelector('.dr-pane > .dr-head .dr-head-name');
     assert.strictEqual(head.textContent, 'Vault');
+    // The sidebar is the library's navigation, named for a screen reader by unseen words (an aria-label would draw Obsidian's tooltip).
+    const pane = s.host.querySelector('.dr-pane');
+    assert.deepStrictEqual([pane.tagName, pane.hasAttribute('aria-label'), w.doc.getElementById(pane.getAttribute('aria-labelledby')).textContent], ['NAV', false, 'Library']);
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree > .dr-tree-row')).map((r) => r.tagName), ['LI', 'LI', 'LI']);
     assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['Inbox', 'Logic', 'Reading'], 'the vault is the head, not a row of the tree');
     assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.textContent), ['Inbox', 'Logic/', 'Reading']);
     assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), [null, 'false', null]);

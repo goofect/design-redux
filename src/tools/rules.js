@@ -138,11 +138,10 @@ export class PropertyRules extends Feature {
           const rules = Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : [];
           if (!rules.length) sayso(matter, { label: 'No rules yet' });
           else {
-            const list = el(matter, 'div', 'dr-rules');
+            const list = el(matter, 'ul', 'dr-rules');
             list.setAttribute('role', 'list');
             rules.forEach((rule) => {
-              const line = el(list, 'div', 'dr-rule');
-              line.setAttribute('role', 'listitem');
+              const line = el(list, 'li', 'dr-rule');
               const said = el(line, 'span', 'dr-text dr-rule-name', ruleName(rule));
               const toggle = new ToggleComponent(line).setValue(rule.on !== false);
               toggle.toggleEl.setAttribute('aria-label', `${said.textContent}: on`);

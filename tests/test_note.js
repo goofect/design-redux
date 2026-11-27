@@ -679,5 +679,66 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([w.plugin.settings.panelPrimaryProps, dr.primaryProps(w.plugin.settings, w.file('B.md')), dr.primaryProps(w.plugin.settings, w.file('Logic/A.md'))], ['course', 'course', 'week, status']);
   });
 
+  await check('the ledger edits a value in the browser\'s own field for its kind: a date, a date and time, a number; one written another way stays text, never emptied; a yes or no turns where it stands', async () => {
+    const w = await world({ 'A.md': '---\ndue: "2026-01-05"\nat: "2026-01-05T09:30"\nsize: 3\nloose: next week\ndone: false\n---\n' });
+    const file = w.file('A.md');
+    const host = w.doc.body.appendChild(w.doc.createElement('div'));
+    const draw = () => { host.textContent = ''; dr.drawLedger(w.plugin, host, file, draw); };
+    draw();
+    const open = (key) => { host.querySelector(`.dr-prop[data-key="${key}"]`).click(); return host.querySelector('.dr-prop input'); };
+    const enter = async (input, value) => { input.value = value; input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await settle(); };
+    let input = open('due');
+    assert.deepStrictEqual([input.type, input.value], ['date', '2026-01-05']);
+    await enter(input, '2026-02-01');
+    input = open('at');
+    assert.deepStrictEqual([input.type, input.value], ['datetime-local', '2026-01-05T09:30']);
+    await enter(input, '2026-01-05T10:00');
+    input = open('size');
+    assert.strictEqual(input.type, 'number');
+    await enter(input, '4.5');
+    input = open('loose');
+    assert.strictEqual(input.type, 'text', 'a value that is no date took a date field');
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+    host.querySelector('.dr-prop[data-key="done"]').click();
+    await settle();
+    assert.ok(!host.querySelector('.dr-prop input'), 'a yes or no opened a field');
+    assert.deepStrictEqual(w.plugin.notes.props(file), { due: '2026-02-01', at: '2026-01-05T10:00', size: 4.5, loose: 'next week', done: true });
+    // A date written another way is never handed to a date field (which would empty it).
+    const probe = w.doc.createElement('input');
+    assert.deepStrictEqual([dr.nativeField(probe, 'date', 'Jan 5'), probe.type], [false, 'text']);
+    // Obsidian's own type for a property decides, where it keeps one: typed as a number, "7" is written as 7.
+    w.app.metadataTypeManager = { getAssignedWidget: (key) => (key === 'count' ? 'number' : null) };
+    assert.deepStrictEqual([dr.valueKind(w.plugin, 'count', ''), dr.valueKind(w.plugin, 'other', 'x'), dr.parseValue('7', '', 'number')], ['number', 'text', 7]);
+    delete w.app.metadataTypeManager;
+  });
+
+  await check('a note out of the vault: copied as formatted text and as its Markdown, read aloud a block at a time and stopped; its properties left out', async () => {
+    const w = await world({ 'A.md': '---\nstatus: draft\n---\n# Title\n\nA line with [[B]].\n' });
+    const file = w.file('A.md');
+    const out = feature(w, 'NoteOut');
+    assert.strictEqual(dr.noteBody('---\na: 1\n---\nbody'), 'body');
+    const written = [];
+    global.XMLSerializer = window.XMLSerializer;
+    global.ClipboardItem = class { constructor(items) { this.items = items; } };
+    Object.defineProperty(window.navigator, 'clipboard', { value: { write: async (items) => written.push(...items), writeText: async () => {} }, configurable: true });
+    assert.strictEqual(await out.copyFormatted(file), true);
+    const html = await written[0].items['text/html'].text();
+    const plain = await written[0].items['text/plain'].text();
+    assert.ok(html.includes('# Title') && !html.includes('status'), `the formatted copy was ${html}`);
+    assert.strictEqual(plain, '# Title\n\nA line with [[B]].\n');
+    const said = [];
+    window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    window.speechSynthesis = { speaking: false, pending: false, speak: (u) => { said.push(u.text); window.speechSynthesis.speaking = true; }, cancel: () => { window.speechSynthesis.speaking = false; } };
+    assert.strictEqual(await out.readAloud(file), 1);
+    assert.deepStrictEqual(said, ['# Title A line with [[B]].']);
+    assert.ok(w.app.commands.commands['design-redux:stop-reading'].checkCallback(true), 'stop was not offered while reading');
+    w.app.commands.commands['design-redux:stop-reading'].checkCallback(false);
+    assert.strictEqual(window.speechSynthesis.speaking, false);
+    assert.strictEqual(w.app.commands.commands['design-redux:stop-reading'].checkCallback(true), false);
+    delete window.speechSynthesis;
+    assert.strictEqual(w.app.commands.commands['design-redux:read-note-aloud'].checkCallback(true), false, 'reading was offered with no voice');
+  });
+
   check.done();
 })();

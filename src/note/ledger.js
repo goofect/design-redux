@@ -23,20 +23,55 @@ import { counted, listOf } from '../core/text.js';
 import { link } from '../ui/button.js';
 import { suggestInto } from '../ui/choose.js';
 import { textInput } from '../ui/field.js';
-import { propRow, rows } from '../ui/row.js';
+import { propRow, termList } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 
-/** What was typed, as a value of the kind the property had: a list stays a list, a number a number. */
-export function parseValue(text, was) {
+/** What was typed, as a value of the kind the property had (or, for a number, is typed as): a list stays a list, a number a number. */
+export function parseValue(text, was, kind) {
   const t = String(text).trim();
   if (Array.isArray(was)) return t ? t.split(',').map((s) => s.trim()).filter(Boolean) : [];
-  if (typeof was === 'number' && t !== '' && Number.isFinite(Number(t))) return Number(t);
+  if ((typeof was === 'number' || kind === 'number') && t !== '' && Number.isFinite(Number(t))) return Number(t);
   if (typeof was === 'boolean' && /^(true|false|yes|no)$/i.test(t)) return /^(true|yes)$/i.test(t);
   return t;
 }
 
 /** A value as the text it is edited as. */
 export const valueText = (value) => valuesOf(value).join(', ');
+
+/**
+ * What a property holds, for the field it is edited in: Obsidian's own type for it where it
+ * keeps one (not public, so behind a check), else what the value looks like. 'list',
+ * 'checkbox', 'date', 'datetime', 'number' or 'text'.
+ */
+export function valueKind(plugin, key, value) {
+  if (Array.isArray(value)) return 'list';
+  const types = plugin.app.metadataTypeManager;
+  const assigned = types && typeof types.getAssignedWidget === 'function' ? types.getAssignedWidget(key) : null;
+  if (['checkbox', 'date', 'datetime', 'number'].includes(assigned)) return assigned;
+  if (typeof value === 'boolean') return 'checkbox';
+  if (typeof value === 'number') return 'number';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(value))) return 'datetime';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return 'date';
+  return 'text';
+}
+
+// The browser's own field for a kind, and the text it takes: a value written another way stays a text field, never emptied.
+const NATIVE = {
+  date: ['date', /^\d{4}-\d{2}-\d{2}$/],
+  datetime: ['datetime-local', /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/],
+  number: ['number', /^-?\d+(\.\d+)?(e[+-]?\d+)?$/i],
+};
+
+/** Makes a text input the browser's own date, date and time, or number field, where the value is one. Returns whether it did. */
+export function nativeField(input, kind, text) {
+  const native = NATIVE[kind];
+  if (!native || (text !== '' && !native[1].test(text))) return false;
+  input.type = native[0];
+  if (kind === 'datetime' && /T\d{2}:\d{2}:\d{2}/.test(text)) input.step = '1';
+  if (kind === 'number') input.step = 'any';
+  input.value = text;
+  return input.value === text;
+}
 
 /** The properties listed first: those set for the note's folder (or the nearest above it that has some), else everywhere's. */
 export function primaryProps(settings, file) {
@@ -120,14 +155,14 @@ export function addRow(plugin, host, file) {
   if (open) return void open.focus();
   let list = host.querySelector('.dr-ledger');
   if (!list) {
-    list = rows(host);
+    list = termList(host);
     list.classList.add('dr-ledger');
   }
   const node = el(list, 'div', 'dr-prop dr-prop-new');
   // Each a field as the plugin draws one: a line under its text, the focus outline round it while typed in.
-  const name = textInput(node, { cls: 'dr-prop-name dr-field-box', label: 'Property name', placeholder: 'name' });
-  const value = textInput(node, { cls: 'dr-prop-value dr-field-box', label: 'Value', placeholder: 'value' });
-  const why = el(node, 'span', 'dr-prop-why');
+  const name = textInput(el(node, 'dt', 'dr-prop-name dr-field-box'), { label: 'Property name', placeholder: 'name' });
+  const value = textInput(el(node, 'dd', 'dr-prop-value dr-field-box'), { label: 'Value', placeholder: 'value' });
+  const why = el(node, 'dd', 'dr-prop-why');
   const has = () => plugin.notes.props(file);
   const stops = [
     suggestInto(plugin.app, name, { words: () => namesIn(plugin.app, plugin.index.markdown()).filter(([k]) => !(k in has())).map(([k]) => ({ text: k, shown: k })), picked: () => value.focus() }),
@@ -206,7 +241,11 @@ export function ledgerKeys(plugin, file) {
 /** One property's row: edited where it stands, a menu of its own, red where its folder's schema says it is wrong. */
 export function ledgerRow(plugin, host, file, key, value, redraw) {
   const wrong = plugin.notes.check(file, key, value);
-  const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => selecting(node) || editValue(plugin, node, file, key, value, redraw) });
+  // A yes or no is turned where it stands, as Obsidian's own checkbox property is; anything else opens its field.
+  const flip = () => valueKind(plugin, key, value) === 'checkbox' && (typeof value === 'boolean' || value == null) && setValue(plugin, file, key, value !== true).then(redraw);
+  const kind = valueKind(plugin, key, value);
+  const datetime = (kind === 'date' || kind === 'datetime') && NATIVE[kind][1].test(String(value)) ? String(value) : null;
+  const node = propRow(host, { name: key, value: valueShown(value), datetime, invalid: wrong, run: () => selecting(node) || flip() || editValue(plugin, node, file, key, value, redraw) });
   node.dataset.key = key;
   // A link in the value is a link: pressed, or Enter on it, it opens what it links to (with Cmd, in a new tab); the
   // rest of the row still edits the value.
@@ -247,7 +286,7 @@ export function drawLedger(plugin, host, file, redraw) {
   const keys = ledgerKeys(plugin, file);
   if (!keys.length) return null;
   const props = plugin.notes.props(file);
-  const list = rows(host);
+  const list = termList(host);
   list.classList.add('dr-ledger');
   keys.forEach((key) => ledgerRow(plugin, list, file, key, props[key], redraw));
   // Rows selected as text are copied as properties: "name: value", a line each.
@@ -281,12 +320,15 @@ function editValue(plugin, node, file, key, was, redraw) {
   const input = textInput(clear(cell), { label: key, value: valueText(was) });
   let done = false;
   const list = Array.isArray(was);
-  const stop = suggestInto(plugin.app, input, { list, words: () => valueWords(plugin, file, key), picked: () => !list && finish(true) });
+  // A date, a date and time, or a number is the browser's own field, its picker open at once; the rest is offered words.
+  const kind = valueKind(plugin, key, was);
+  const native = nativeField(input, kind, valueText(was));
+  const stop = native ? () => {} : suggestInto(plugin.app, input, { list, words: () => valueWords(plugin, file, key), picked: () => !list && finish(true) });
   const finish = async (write) => {
     if (done) return;
     done = true;
     stop();
-    if (write && input.value !== valueText(was)) await setValue(plugin, file, key, parseValue(input.value, was));
+    if (write && input.value !== valueText(was)) await setValue(plugin, file, key, parseValue(input.value, was, kind));
     redraw();
   };
   input.addEventListener('keydown', (e) => {
@@ -304,5 +346,8 @@ function editValue(plugin, node, file, key, was, redraw) {
   });
   input.addEventListener('click', (e) => e.stopPropagation());
   input.focus();
-  input.select();
+  try {
+    if (native && kind !== 'number' && typeof input.showPicker === 'function') input.showPicker();
+    else input.select();
+  } catch (err) { /* a picker needs the press that opened the field; without one the field is enough */ }
 }

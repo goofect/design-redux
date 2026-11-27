@@ -21,11 +21,17 @@ export function enableDrop(screen, body) {
     const [node] = entryOf(e.target);
     if (node) node.setAttribute('draggable', 'true');
   });
+  // A drag is Obsidian's own as well, as from its file explorer: dropped into a note it is a link (in the vault's
+  // own way of writing one), onto a pane it opens there, into another app it is the note's link as text.
   body.addEventListener('dragstart', (e) => {
     const [, entry] = entryOf(e.target);
     if (!entry || !e.dataTransfer) return;
+    const drag = plugin.app.dragManager;
+    const own = drag && typeof drag.onDragStart === 'function' && (entry instanceof TFolder ? drag.dragFolder : drag.dragFile);
+    if (typeof own === 'function') drag.onDragStart(e, own.call(drag, e, entry));
+    else if (!(entry instanceof TFolder)) e.dataTransfer.setData('text/plain', plugin.app.fileManager.generateMarkdownLink(entry, ''));
     e.dataTransfer.setData(TYPE, entry.path);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = 'copyMove';
   });
   let over = null;
   const mark = (node) => {

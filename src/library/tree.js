@@ -26,7 +26,7 @@ export function drawTree(screen, host) {
   const branch = (folder, depth) => {
     const kids = pinnedFirst(plugin, folder, shownFolders(plugin, folder));
     const isOpen = unfolded.has(folder.path);
-    const node = el(list, 'div', 'dr-row dr-tree-row');
+    const node = el(list, 'li', 'dr-row dr-tree-row');
     asButton(node, null, () => plugin.showFolder(folder));
     node.setAttribute('role', 'treeitem');
     node.setAttribute('aria-level', String(depth + 1));

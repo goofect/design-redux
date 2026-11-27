@@ -405,6 +405,25 @@ async function signedIn(service, fake) {
     w.plugin.unload();
   });
 
+  await check('offline, a backup waits: asked for, it says so and sends nothing; the network back, it runs', async () => {
+    const drive = fakeDrive();
+    const { w, backup } = await signedIn(dr.GOOGLE_DRIVE, drive);
+    await w.app.vault.modify(w.file('Home.md'), 'written offline');
+    const online = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window.navigator), 'onLine');
+    Object.defineProperty(window.navigator, 'onLine', { value: false, configurable: true });
+    requestUrl.log.length = 0;
+    assert.deepStrictEqual(await backup.backUp(true), []);
+    assert.strictEqual(uploads().length, 0, 'something was sent offline');
+    assert.ok(obsidian.Notice.log.some((n) => /Offline/.test(n)), 'nothing said the backup waits');
+    delete window.navigator.onLine;
+    if (online) assert.strictEqual(window.navigator.onLine, true);
+    let asked = null;
+    backup.schedule = (ms) => (asked = ms);
+    window.dispatchEvent(new window.Event('online'));
+    assert.strictEqual(asked, 0, 'the network back, the backup did not run');
+    w.plugin.unload();
+  });
+
   await check('signing out forgets the sign-in and the record on this machine, and leaves the copy there', async () => {
     const drive = fakeDrive();
     const { w, backup } = await signedIn(dr.GOOGLE_DRIVE, drive);

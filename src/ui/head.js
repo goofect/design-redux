@@ -12,8 +12,9 @@ import { iconButton } from './button.js';
  * appended after (the zoom control) follows the buttons.
  */
 export function headRow(parent, opts) {
-  const node = el(parent, 'div', 'dr-head');
-  const label = el(node, 'span', 'dr-head-name dr-clip', opts.label);
+  // A header; its label the pane's heading, but where pressing it goes somewhere: then it is that button.
+  const node = el(parent, 'header', 'dr-head');
+  const label = el(node, opts.run ? 'span' : 'h2', 'dr-head-name dr-clip', opts.label);
   if (opts.run) asButton(label, null, opts.run);
   if (opts.link) asButton(el(node, 'span', 'dr-link dr-head-link', opts.link.text), null, opts.link.run);
   (opts.buttons || []).forEach((b) => iconButton(node, b));

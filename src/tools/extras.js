@@ -1,8 +1,9 @@
 /* ------------------------------------------------------------------ */
-/* Small tools: diagnostics, the actions menu, the menu filter         */
+/* Small tools: diagnostics, the actions menu, the menu filter, a pane */
+/* filling the screen                                                  */
 /* ------------------------------------------------------------------ */
 
-import { Menu } from 'obsidian';
+import { Menu, Notice } from 'obsidian';
 import { applies } from '../core/actions.js';
 import { copyText } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
@@ -79,3 +80,39 @@ export class MenuFilter extends Feature {
 MenuFilter.title = 'Menu filter';
 MenuFilter.section = 'Tools';
 MenuFilter.about = 'Leaves the entries that only repeat the plugin’s own out of Obsidian’s menus.';
+
+/** The pane in front fills the screen (the browser's full screen of its content); the same command, or Escape, gives it back. */
+export class FullPane extends Feature {
+  enable() {
+    this.add(() => this.leave());
+  }
+
+  /** The content of the pane in front, or null. */
+  pane() {
+    const ws = this.app.workspace;
+    const leaf = typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : null;
+    const el = leaf && leaf.view && leaf.view.contentEl;
+    return el && typeof el.requestFullscreen === 'function' ? el : null;
+  }
+
+  get full() {
+    return !!activeDocument.fullscreenElement;
+  }
+
+  async toggle() {
+    if (this.full) return this.leave();
+    const el = this.pane();
+    if (el) await el.requestFullscreen({ navigationUI: 'hide' }).catch(() => new Notice('The pane could not fill the screen.'));
+    return !!el;
+  }
+
+  leave() {
+    const doc = activeDocument;
+    if (doc.fullscreenElement && typeof doc.exitFullscreen === 'function') return doc.exitFullscreen().catch(() => null);
+    return null;
+  }
+
+  actions() {
+    return [{ id: 'fill-screen', name: 'Fill the screen with this pane, or give it back', when: () => this.full || !!this.pane(), run: () => this.toggle() }];
+  }
+}

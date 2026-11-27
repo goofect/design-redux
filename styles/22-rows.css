@@ -27,6 +27,12 @@
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
+/* A long list draws only the rows in sight: the rest wait, a row's height each, until they scroll near. */
+.dr-rows > .dr-row {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto var(--dr-row);
+}
+
 .dr-row-end {
   color: var(--dr-muted);
 }

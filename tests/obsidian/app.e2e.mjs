@@ -11,7 +11,7 @@ suite('Design Redux in Obsidian: the app', function () {
         commands: Object.keys(app.commands.commands).filter((id) => id.startsWith('design-redux:')).length,
       };
     });
-    expect(got.features).toBe(23);
+    expect(got.features).toBe(25);
     expect(got.commands).toBeGreaterThanOrEqual(59);
   });
 
@@ -96,6 +96,39 @@ suite('Design Redux in Obsidian: the app', function () {
       (t) => t === 'design-redux-browse'
     );
     expect(type).toBe('design-redux-browse');
+  });
+
+  it('drags a note from the library as Obsidian drags its own: a link for a note or another app, the library\'s own path for a move', async function () {
+    const got = await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeavesOfType('design-redux-browse')[0];
+      leaf.view.screen.go(app.vault.getAbstractFileByPath('Politics'));
+      await new Promise((r) => setTimeout(r, 300));
+      const row = leaf.view.containerEl.querySelector('[data-path="Politics/Anarchy.md"]');
+      if (!row) return { row: false };
+      row.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      const data = new DataTransfer();
+      row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: data }));
+      const seen = { row: true, types: Array.from(data.types), text: data.getData('text/plain'), path: data.getData('text/x-design-redux-path'), own: !!app.dragManager.draggable };
+      row.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: data }));
+      return seen;
+    });
+    expect(got.row).toBe(true);
+    expect(got.path).toBe('Politics/Anarchy.md');
+    expect(got.own).toBe(true);
+    expect(got.types).toContain('text/plain');
+  });
+
+  it('keeps to the parts of Obsidian and the browser it leans on: a property\'s type, the drag manager, full screen, the voice, the rich clipboard', async function () {
+    const got = await browser.executeObsidian(({ app }) => ({
+      widget: typeof app.metadataTypeManager.getAssignedWidget,
+      drag: [typeof app.dragManager.dragFile, typeof app.dragManager.dragFolder, typeof app.dragManager.onDragStart],
+      full: typeof document.body.requestFullscreen,
+      voice: !!window.speechSynthesis && typeof SpeechSynthesisUtterance,
+      clip: typeof ClipboardItem,
+      picker: typeof HTMLInputElement.prototype.showPicker,
+      fill: app.commands.commands['design-redux:fill-screen'].checkCallback(true),
+    }));
+    expect(got).toEqual({ widget: 'function', drag: ['function', 'function', 'function'], full: 'function', voice: 'function', clip: 'function', picker: 'function', fill: true });
   });
 
   it('steps to the next note in its folder on two fingers sideways over the editor, and back the other way', async function () {

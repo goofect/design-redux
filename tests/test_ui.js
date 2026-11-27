@@ -168,5 +168,24 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     key(cells[4], 'Home'); assert.strictEqual(at(), 4, 'still listening after stop');
   });
 
+  await check('drawn as what it is: a list a ul of li, the properties a dl (a dt and a dd each, a date a time), a section\'s title a heading, a head a header with its heading, or its button where it is pressed', () => {
+    fresh();
+    const list = dr.rows(root);
+    dr.row(list, { name: 'A note' });
+    assert.strictEqual(`${list.tagName}>${list.firstChild.tagName}`, 'UL>LI');
+    const terms = dr.termList(root);
+    dr.propRow(terms, { name: 'due', value: '2026-01-05', datetime: '2026-01-05' });
+    dr.propRow(terms, { name: 'status', value: 'draft', invalid: 'not one of done' });
+    const [due, status] = terms.querySelectorAll('.dr-prop');
+    assert.deepStrictEqual([terms.tagName, ...Array.from(due.children).map((c) => c.tagName)], ['DL', 'DT', 'DD']);
+    assert.deepStrictEqual([due.querySelector('time').getAttribute('datetime'), due.querySelector('time').textContent], ['2026-01-05', '2026-01-05']);
+    assert.deepStrictEqual(Array.from(status.children).map((c) => c.tagName), ['DT', 'DD', 'DD'], 'the reason a value is wrong is said in a dd of its own');
+    assert.strictEqual(dr.sectionTitle(root, { title: 'Notes' }).tagName, 'H3');
+    const head = dr.headRow(root, { label: 'Search' });
+    assert.strictEqual(`${head.tagName}>${head.querySelector('.dr-head-name').tagName}`, 'HEADER>H2');
+    const pressed = dr.headRow(root, { label: 'Vault', run: () => {} }).querySelector('.dr-head-name');
+    assert.deepStrictEqual([pressed.tagName, pressed.getAttribute('role')], ['SPAN', 'button']);
+  });
+
   check.done();
 })();

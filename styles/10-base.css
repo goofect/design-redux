@@ -94,3 +94,31 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---- The plugin draws what things are (a list, a description list, a heading, a search): the
+   browser's own indents, markers, sizes and weights for them go. Class against class and first in
+   the cascade, so the parts after say how each looks. ---- */
+.dr-rows,
+.dr-outline,
+.dr-rules {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dr-row,
+.dr-rule {
+  list-style: none;
+}
+
+.dr-prop-name,
+.dr-prop-value,
+.dr-prop-why {
+  margin: 0;
+}
+
+.dr-head-name,
+.dr-section {
+  margin: 0;
+  font: inherit;
+}

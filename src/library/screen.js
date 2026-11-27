@@ -13,7 +13,7 @@ import { Keymap, TFile, TFolder } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { headRow } from '../ui/head.js';
 import { rove } from '../ui/keys.js';
-import { drawFolderPage } from './contents.js';
+import { drawFolderPage, nameRegion } from './contents.js';
 import { folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
 import { enableDrop } from './drop.js';
@@ -140,7 +140,9 @@ export class LibraryScreen {
     const top = folder.path === '/' && !this.filter;
     // The head: the pane's name, a label.
     const name = !this.opts.wide ? 'Vault' : this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : top ? 'Vault' : folder.name;
-    const pane = el(host, 'div', 'dr-pane');
+    // The sidebar is the library's navigation; a page is a region of its own. Named by unseen words, not an
+    // aria-label, over which Obsidian would draw a tooltip.
+    const pane = el(host, !this.opts.wide ? 'nav' : 'section', 'dr-pane');
     // In the sidebar the head is the vault (pressed, it shows the vault in the page) and one word, Settings, for Obsidian's own,
     // whose button the bare workspace hides. A folder's page has no head: its path says where it is.
     const side = !this.opts.wide;
@@ -156,6 +158,7 @@ export class LibraryScreen {
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) this.menuFor(e);
       else if (e.key === 'Backspace' && e.target.tagName !== 'INPUT') this.back();
     });
+    nameRegion(pane, side ? 'Library' : name);
     enableDrop(this, this.body);
     this.keepPlace(hadFocus);
   }

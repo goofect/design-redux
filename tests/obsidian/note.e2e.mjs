@@ -520,6 +520,43 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(await browser.execute(() => document.querySelectorAll('.suggestion-container').length)).toBe(0);
   });
 
+  it('edits a date in the browser\'s own date field, in the plugin\'s face and with no glyph, and turns a yes or no where it stands', async function () {
+    const kind = await browser.executeObsidian(async ({ app }) => {
+      const text = '---\ndue: 2026-01-05\ndone: false\n---\nText.\n';
+      let file = app.vault.getAbstractFileByPath('Politics/Dated.md');
+      if (file) await app.vault.modify(file, text);
+      else file = await app.vault.create('Politics/Dated.md', text);
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source' } });
+      await new Promise((r) => setTimeout(r, 300));
+      return typeof (app.metadataCache.getFileCache(file).frontmatter || {}).due;
+    });
+    expect(kind).toBe('string');
+    const due = await $('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="due"]');
+    await due.waitForExist({ timeout: 8000 });
+    await due.click();
+    const field = await browser.execute(() => {
+      const input = document.querySelector('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="due"] input');
+      if (!input) return null;
+      // The rules that take the field's glyphs away are there (one pseudo-element the browser didn't know would drop a whole rule).
+      const rules = Array.from(document.styleSheets).flatMap((sheet) => { try { return Array.from(sheet.cssRules); } catch (e) { return []; } }).map((r) => r.selectorText || '');
+      const glyph = rules.some((t) => t.includes('dr-input::-webkit-calendar-picker-indicator')) && rules.some((t) => t.includes('dr-input::-webkit-datetime-edit'));
+      const seen = { type: input.type, value: input.value, glyph: glyph ? 'none' : 'kept', font: getComputedStyle(input).fontFamily };
+      input.value = '2026-03-02';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      return seen;
+    });
+    await browser.keys(['Escape']);
+    expect(field && [field.type, field.value, field.glyph]).toEqual(['date', '2026-01-05', 'none']);
+    expect(field.font).toMatch(/mono/i);
+    const read = () => browser.executeObsidian(({ app }) => app.metadataCache.getFileCache(app.vault.getAbstractFileByPath('Politics/Dated.md')).frontmatter || {});
+    expect((await readUntil(read, (fm) => fm.due === '2026-03-02')).due).toBe('2026-03-02');
+    const done = await $('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="done"]');
+    await done.waitForExist({ timeout: 8000 });
+    await done.click();
+    expect((await readUntil(read, (fm) => fm.done === true)).done).toBe(true);
+    expect(await browser.execute(() => !!document.querySelector('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="done"] input'))).toBe(false);
+  });
+
   it('opens what a link in a property\'s value links to when it is pressed', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);

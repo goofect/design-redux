@@ -169,6 +169,28 @@ input.dr-input::placeholder {
   opacity: 1;
 }
 
+/* The browser's own date and number fields keep their keys and picker, not their glyphs. */
+input.dr-input::-webkit-calendar-picker-indicator,
+input.dr-input::-webkit-inner-spin-button,
+input.dr-input::-webkit-outer-spin-button {
+  display: none;
+  appearance: none;
+  margin: 0;
+}
+
+input.dr-input::-webkit-datetime-edit,
+input.dr-input::-webkit-datetime-edit-fields-wrapper,
+input.dr-input::-webkit-datetime-edit-text,
+input.dr-input::-webkit-date-and-time-value {
+  padding: 0;
+  color: inherit;
+  text-align: start;
+}
+
+input.dr-input[type="number"] {
+  appearance: textfield;
+}
+
 .dr-field-note {
   color: var(--dr-muted);
 }

@@ -142,7 +142,11 @@ something away.
 - A screen is built only from the shared pieces in `src/ui/` (button, row,
   head, segments, field, sheet, say-so) and the plugin's
   glyphs (`glyph(el, name)`). State is the element's ARIA attribute; the
-  styles read nothing else.
+  styles read nothing else. The pieces draw what things are: a list a `ul`
+  of `li`, the properties a `dl` (a date a `time`), a pane's or section's
+  title a heading, the sidebar a `nav`, a page a `section`, search a
+  `search`. A region is named by `nameRegion`, never an `aria-label`, over
+  which Obsidian draws a tooltip.
 - The look: `body.dr-active` and a `dr-region-<name>` class a region, added
   to every window by `Appearance` and removed on unload. Rules on Obsidian's
   own DOM are gated by both and listed in the selector map at the top of the

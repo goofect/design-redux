@@ -18,6 +18,9 @@ import { ONEDRIVE } from './onedrive.js';
 import { collapseRenames, forgetPath, movePaths, planBackup, readRecord, recorded } from './plan.js';
 import { BackupError, Session, authorize, readLocal, readSecret, revoke, vaultKey, writeLocal, writeSecret } from './session.js';
 
+/** Whether the system says there is no network (where it can't say, there is). */
+const offline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
+
 // A minute after the last change, never more than ten behind, a while after opening, and again a while after failing.
 const QUIET = 60 * 1000;
 const MOST = 10 * 60 * 1000;
@@ -105,6 +108,12 @@ export class Backup extends Feature {
       this.changed();
     });
     if (this.targets().length) this.schedule(START);
+    // Offline, a backup waits for the network instead of failing; the moment it is back, the backup runs.
+    this.listenDom(window, 'online', () => {
+      if (!this.offline) return;
+      this.offline = false;
+      if (this.targets().length) this.schedule(0);
+    });
     this.add(() => {
       clearTimeout(this.timer);
       this.timer = null;
@@ -123,7 +132,8 @@ export class Backup extends Feature {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.timer = null;
-      this.backUp();
+      if (offline()) this.offline = true;
+      else this.backUp();
     }, ms);
   }
 
@@ -133,6 +143,11 @@ export class Backup extends Feature {
       this.again = true;
       if (told) new Notice('A backup is running: this one comes after it.');
       return this.running;
+    }
+    if (offline()) {
+      this.offline = true;
+      if (told) new Notice('Offline: the backup runs once the network is back.');
+      return [];
     }
     clearTimeout(this.timer);
     this.timer = null;
