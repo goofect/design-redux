@@ -21,9 +21,10 @@ const keptRule = (when, set) => ({ id: `rule-${when.kind}`, on: true, when, set,
 let board = '';
 Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { board = String(t); }, readText: async () => board } });
 // A 2D context that counts what is drawn.
-const drawn = { rects: 0, strokes: 0 };
+const drawn = { rects: 0, strokes: 0, spheres: 0 };
 window.HTMLCanvasElement.prototype.getContext = function () {
-  return new Proxy({}, { get: (_, k) => (k === 'fillRect' ? () => drawn.rects++ : k === 'stroke' ? () => drawn.strokes++ : () => {}), set: () => true });
+  const count = { fillRect: () => drawn.rects++, stroke: () => drawn.strokes++, drawImage: () => drawn.spheres++, createRadialGradient: () => ({ addColorStop() {} }) };
+  return new Proxy({}, { get: (_, k) => count[k] || (() => {}), set: () => true });
 };
 
 const VAULT = {
@@ -255,7 +256,7 @@ const VAULT = {
     assert.ok(!leaf.view.contentEl.querySelector('.dr-graph-filter'));
   });
 
-  await check('the 3D graph: the same cloud every time; drawn as squares and hairlines; picked by a click, opened by a second; turned by the keys', async () => {
+  await check('the 3D graph: the same cloud every time, seen in perspective (near larger); spheres and lines drawn far to near; picked by a click, opened by a second; turned by the keys', async () => {
     const files = {};
     for (let i = 0; i < 30; i++) files[`N${i}.md`] = `[[N${(i * 7 + 3) % 30}]] [[N${(i + 1) % 30}]]`;
     const w = await world(files);
@@ -268,12 +269,21 @@ const VAULT = {
     const t = Date.now();
     dr.layoutSpace(2000, Array.from({ length: 3000 }, (_, i) => [i % 2000, (i * 13) % 2000]));
     assert.ok(Date.now() - t < 4000, `2,000 notes took ${Date.now() - t}ms to lay out`);
+    // In perspective: of two notes the same size, the nearer is drawn larger and further from the middle.
+    const two = new Float32Array([10, 0, 30, 10, 0, -30]);
+    const seen = dr.project(two, { yaw: 0, pitch: 0, zoom: 1, w: 100, h: 100, radius: 32 });
+    assert.ok(seen[3] > 1 && seen[7] < 1 && seen[2] > seen[6], 'no perspective: near and far are the same size');
+    assert.ok(seen[0] - 50 > seen[4] - 50, 'the nearer note is not further from the middle');
+    assert.ok(dr.sphereRadius(4, seen[3], 1, 5) > dr.sphereRadius(4, seen[7], 1, 5) && dr.sphereRadius(9, 1, 1, 5) > dr.sphereRadius(1, 1, 1, 5));
+    // Drawn far to near, spheres and lines together: a line between two far notes goes before a near sphere.
+    const order = dr.drawOrder(new Float32Array([0, 0, -5, 1, 0, 0, -4, 1, 0, 0, 9, 1]), [[0, 1]]);
+    assert.deepStrictEqual(order.map((it) => (it.link ? 'link' : it.sphere)), [0, 'link', 1, 2]);
     const g3 = feature(w, 'Graph3D');
     const leaf = await g3.open(null);
     await settle();
     const view = leaf.view;
     assert.ok(view.canvas && !/\d/.test(view.canvas.getAttribute("aria-label")) && !view.contentEl.querySelector(".dr-head .dr-muted"), "a count on the 3D graph");
-    assert.ok(drawn.rects >= 31 && drawn.strokes >= 1, 'nothing was drawn');
+    assert.ok(drawn.spheres >= 30 && drawn.strokes >= 1, 'no spheres or no lines were drawn');
     const [x, y] = [view.screen[0], view.screen[1]];
     const at = (type) => view.canvas.dispatchEvent(new window.MouseEvent(type, { clientX: x, clientY: y, bubbles: true }));
     at('pointerdown'); at('pointerup');

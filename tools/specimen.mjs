@@ -86,9 +86,11 @@ h2{font:inherit}
 .spec-note-text .inline-title{margin:0 0 8px;font-size:1.728em;line-height:1.2;font-weight:700}
 .spec-note-text p{margin:0 0 16px}
 .spec-graph{display:block}
-.spec-graph-links{fill:none;stroke:var(--dr-muted);stroke-width:1}
-.spec-graph .is-ink{fill:var(--dr-ink)}
-.spec-graph-ring{fill:var(--dr-bg);stroke:var(--dr-ink);stroke-width:2}
+.spec-graph-line{stroke:var(--dr-ink);stroke-linecap:round}
+.spec-graph-ring{fill:none;stroke:var(--dr-ink);stroke-width:2}
+.spec-graph-haze{fill:var(--dr-bg)}
+.spec-lit{stop-color:var(--dr-muted)}.spec-shade{stop-color:var(--dr-ink)}
+.theme-dark .spec-lit{stop-color:var(--dr-ink)}.theme-dark .spec-shade{stop-color:var(--dr-muted)}
 .setting-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0}
 .setting-item-description:empty{display:none}
 body.spec-shell>main,body.spec-framed>.spec-top-bar{display:none}

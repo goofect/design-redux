@@ -121,14 +121,32 @@ export async function screens() {
   const n = 42;
   const links = Array.from({ length: n }, (_, i) => [i, (i * 5 + 3) % n]).concat(Array.from({ length: n }, (_, i) => [i, (i + 1) % n]));
   const laid = dr.layoutSpace(n, links);
-  const zoom = dr.fitZoom(laid, 720, 400);
-  const at = dr.project(laid, { yaw: 0.6, pitch: 0.35, zoom, w: 720, h: 400 });
+  const fit = dr.fitView(laid, 720, 400);
+  const zoom = fit.zoom;
+  const radius = dr.spaceRadius(laid);
+  const at = dr.project(laid, { yaw: 0.6, pitch: 0.35, w: 720, h: 400, radius, ...fit });
   const degree = new Array(n).fill(0);
   links.forEach(([a, b]) => { degree[a]++; degree[b]++; });
-  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => at[a * 3 + 2] - at[b * 3 + 2]);
-  const [picked, current] = [order[n - 3], order[n - 8]];
-  const sq = (i) => { const h = Math.round(Math.max(3, Math.min(12, 2 + Math.sqrt(degree[i]) * 1.5) * Math.max(0.6, Math.min(2, zoom)))) + (i === picked || i === current ? 2 : 0); return [Math.round(at[i * 3] - h), Math.round(at[i * 3 + 1] - h), h * 2]; };
-  const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-head-name dr-clip">3D graph</span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400"><path class="spec-graph-links" d="${links.map(([a, b]) => `M${at[a * 3].toFixed(1)} ${at[a * 3 + 1].toFixed(1)}L${at[b * 3].toFixed(1)} ${at[b * 3 + 1].toFixed(1)}`).join('')}"/>${order.map((i) => { const [x, y, s] = sq(i); const mark = i === picked || i === current; return mark ? `<rect class="spec-graph-ring" x="${x + 1}" y="${y + 1}" width="${s - 2}" height="${s - 2}"/>` : `<rect class="is-ink" x="${x}" y="${y}" width="${s}" height="${s}"/>`; }).join('')}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
+  const byDepth = Array.from({ length: n }, (_, i) => i).sort((a, b) => at[a * 4 + 2] - at[b * 4 + 2]);
+  const [picked, current] = [byDepth[n - 3], byDepth[n - 8]];
+  // Drawn as the canvas draws it: far to near, each sphere lit from the lighter tone, each line fainter the further it is.
+  const near = (z) => Math.max(0, Math.min(1, (z / radius + 1) / 2));
+  const unit = dr.sphereUnit(laid, links);
+  const parts = dr.drawOrder(at, links).map((it) => {
+    if (it.link) {
+      const [a, b] = it.link;
+      const width = Math.max(0.75, 1.6 * (at[a * 4 + 3] + at[b * 4 + 3]) / 2);
+      return `<line class="spec-graph-line" x1="${at[a * 4].toFixed(1)}" y1="${at[a * 4 + 1].toFixed(1)}" x2="${at[b * 4].toFixed(1)}" y2="${at[b * 4 + 1].toFixed(1)}" stroke-width="${width.toFixed(2)}" opacity="${(0.25 + 0.5 * near(it.depth)).toFixed(2)}"/>`;
+    }
+    const i = it.sphere;
+    const r = dr.sphereRadius(degree[i], at[i * 4 + 3], zoom, unit);
+    const [x, y] = [at[i * 4].toFixed(1), at[i * 4 + 1].toFixed(1)];
+    const ring = i === picked || i === current ? `<circle class="spec-graph-ring" cx="${x}" cy="${y}" r="${(r + 3).toFixed(1)}"/>` : '';
+    const haze = 0.6 * (1 - near(it.depth));
+    return `<circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="url(#spec-sphere)"/><circle class="spec-graph-haze" cx="${x}" cy="${y}" r="${(r + 0.5).toFixed(1)}" opacity="${haze.toFixed(2)}"/>${ring}`;
+  }).join('');
+  const sphere = '<defs><radialGradient id="spec-sphere" cx="0.325" cy="0.3" r="0.5" fx="0.325" fy="0.3"><stop offset="0" class="spec-lit"/><stop offset="0.55" class="spec-shade"/><stop offset="1" class="spec-shade"/></radialGradient></defs>';
+  const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-head-name dr-clip">3D graph</span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400">${sphere}${parts}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
 
   w.plugin.unload();
   return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. Two panes on the ground, no frame, no line: labels in capitals, parted by space. The sidebar: VAULT and SETTINGS, then the folders, grey but the one open. The page: the path, the folders above grey and this one black, then only the notes in it.',
@@ -137,7 +155,7 @@ export async function screens() {
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the HTML a note holds, in reading view', 560, 560, noteHtml, 'is-note')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',
       `<div class="spec-states is-close">${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
-    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked underlined, a folded branch marked +. The 3D graph: ink squares on lines; the picked note and the open one larger, inverted.',
+    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked underlined, a folded branch marked +. The 3D graph in perspective: notes as spheres lit from the grey to the ink, the more linked the larger; near ones larger and darker, far ones fainter, and the lines between them fainter with distance; the picked note and the open one ringed.',
       `<div class="spec-states is-close">${frame('the map of Projects, Thesis picked', 720, 440, mapHtml)}${frame('the 3D graph', 720, 448, graph)}</div>`)
     + section('screens-sheets', 'A sheet, and the settings page', 'Property rules: each said as a sentence, its toggle beside it; a new one written as a sentence with fields. The settings page: Obsidian’s own rows, a name, what it does and a toggle each, the features under a heading; nothing else.',
       `<div class="spec-states is-close">${frame('property rules', 400, null, rules)}${frame('the settings page', 680, null, settingsPage)}</div>`);

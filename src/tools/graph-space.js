@@ -89,29 +89,94 @@ export function layoutSpace(n, links, steps = 80) {
       pos[k] += Math.max(-cap, Math.min(cap, m));
     }
   }
+  // Centred on its own middle, so the camera turns it about what it holds.
+  for (let axis = 0; axis < 3; axis++) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += pos[i * 3 + axis];
+    for (let i = 0; i < n; i++) pos[i * 3 + axis] -= sum / Math.max(1, n);
+  }
   return pos;
 }
 
-/** The zoom at which the whole cloud fits a w × h view, with a margin of three units. */
-export function fitZoom(pos, w, h) {
+/** How far the farthest note is from the middle. */
+export function spaceRadius(pos) {
   let r = 1;
   for (let i = 0; i < pos.length; i += 3) r = Math.max(r, Math.hypot(pos[i], pos[i + 1], pos[i + 2]));
-  return Math.max(0.05, (Math.min(w, h) / 2 - 24) / r);
+  return r;
 }
 
-/** Where each note lands on a screen: a Float32Array of x, y, depth. `view` is { yaw, pitch, zoom, w, h }. */
+/** The camera stands this many cloud radii from the middle: near enough for depth to show, far enough not to bend it. */
+export const CAMERA = 3;
+
+/**
+ * How the whole cloud fits a w × h view as the camera sees it from `look` ({ yaw, pitch }): the
+ * zoom, and the shift (`panX`, `panY`) that puts the middle of what is seen in the middle of the view.
+ */
+export function fitView(pos, w, h, look = { yaw: 0.6, pitch: 0.35 }) {
+  const seen = project(pos, { yaw: look.yaw, pitch: look.pitch, zoom: 1, w: 0, h: 0, radius: spaceRadius(pos) });
+  let [x0, x1, y0, y1] = [Infinity, -Infinity, Infinity, -Infinity];
+  for (let i = 0; i < seen.length; i += 4) {
+    x0 = Math.min(x0, seen[i]); x1 = Math.max(x1, seen[i]);
+    y0 = Math.min(y0, seen[i + 1]); y1 = Math.max(y1, seen[i + 1]);
+  }
+  const zoom = Math.max(0.05, Math.min((w - 80) / Math.max(1, x1 - x0), (h - 80) / Math.max(1, y1 - y0)));
+  return { zoom, panX: -((x0 + x1) / 2) * zoom, panY: -((y0 + y1) / 2) * zoom };
+}
+
+/** The zoom alone at which the cloud fits (see fitView). */
+export function fitZoom(pos, w, h, look) {
+  return fitView(pos, w, h, look).zoom;
+}
+
+/**
+ * Where each note lands on the screen, seen in perspective from a camera turned by `yaw` and
+ * `pitch`: a Float32Array of x, y, depth (larger is nearer) and scale (larger is nearer, 1 at
+ * the middle's depth). `view` is { yaw, pitch, zoom, w, h, radius }.
+ */
 export function project(pos, view) {
   const n = pos.length / 3;
-  const out = new Float32Array(n * 3);
+  const out = new Float32Array(n * 4);
+  const d = CAMERA * (view.radius || spaceRadius(pos));
   const [cy, sy, cp, sp] = [Math.cos(view.yaw), Math.sin(view.yaw), Math.cos(view.pitch), Math.sin(view.pitch)];
   for (let i = 0; i < n; i++) {
     const x = pos[i * 3] * cy + pos[i * 3 + 2] * sy;
     const z0 = -pos[i * 3] * sy + pos[i * 3 + 2] * cy;
     const y = pos[i * 3 + 1] * cp - z0 * sp;
     const z = pos[i * 3 + 1] * sp + z0 * cp;
-    out[i * 3] = view.w / 2 + x * view.zoom;
-    out[i * 3 + 1] = view.h / 2 + y * view.zoom;
-    out[i * 3 + 2] = z;
+    const scale = d / Math.max(d * 0.2, d - z);
+    out[i * 4] = view.w / 2 + (view.panX || 0) + x * view.zoom * scale;
+    out[i * 4 + 1] = view.h / 2 + (view.panY || 0) + y * view.zoom * scale;
+    out[i * 4 + 2] = z;
+    out[i * 4 + 3] = scale;
   }
   return out;
+}
+
+/**
+ * The size of a sphere in the cloud's own units: a part of the usual link's length, so linked
+ * spheres stand apart along their lines; with no links, a part of the room each note has.
+ */
+export function sphereUnit(pos, links = []) {
+  if (links.length) {
+    const lengths = links.map(([a, b]) => Math.hypot(pos[a * 3] - pos[b * 3], pos[a * 3 + 1] - pos[b * 3 + 1], pos[a * 3 + 2] - pos[b * 3 + 2])).sort((x, y) => x - y);
+    return Math.max(0.5, 0.1 * lengths[Math.floor(lengths.length / 2)]);
+  }
+  return (0.2 * spaceRadius(pos)) / Math.cbrt(Math.max(1, pos.length / 3));
+}
+
+/** A note's sphere, its radius on the screen: the more it links, the larger; scaled by the zoom and, nearer, larger still. */
+export function sphereRadius(degree, scale, zoom, unit) {
+  return Math.max(3, Math.min(48, unit * (1 + Math.sqrt(degree) * 0.3) * zoom * scale));
+}
+
+/**
+ * What to draw, far to near: each sphere at its depth, each line at its middle's, so a nearer
+ * sphere covers the lines and spheres behind it. [{ sphere: i } | { link: [a, b] }].
+ */
+export function drawOrder(screen, links) {
+  const n = screen.length / 4;
+  const items = [];
+  for (let i = 0; i < n; i++) items.push({ depth: screen[i * 4 + 2], sphere: i });
+  links.forEach(([a, b]) => items.push({ depth: (screen[a * 4 + 2] + screen[b * 4 + 2]) / 2 - 0.001, link: [a, b] }));
+  return items.sort((p, q) => p.depth - q.depth);
 }

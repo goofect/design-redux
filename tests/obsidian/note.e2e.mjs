@@ -94,15 +94,44 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(raw).toContain('Second page text.');
   });
 
-  it('opens the 3D graph', async function () {
-    await browser.executeObsidian(({ app }) => { app.commands.executeCommandById('design-redux:open-graph-3d'); });
-    const type = await readUntil(
-      () => browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('design-redux-graph-3d').length),
-      (n) => n > 0
+  it('opens the 3D graph: notes as spheres in perspective, their links as lines', async function () {
+    // A small linked vault of its own: a ring of notes, each linked on to the next and across.
+    await browser.executeObsidian(async ({ app }) => {
+      if (!app.vault.getAbstractFileByPath('Graph')) await app.vault.createFolder('Graph');
+      for (let i = 0; i < 14; i++) {
+        const path = `Graph/G${i}.md`;
+        if (!app.vault.getAbstractFileByPath(path)) await app.vault.create(path, `[[G${(i + 1) % 14}]] [[G${(i * 5 + 3) % 14}]]`);
+      }
+      await new Promise((r) => setTimeout(r, 1200));
+      app.commands.executeCommandById('design-redux:open-graph-3d');
+    });
+    const seen = await readUntil(
+      () => browser.executeObsidian(({ app }) => {
+        const leaf = app.workspace.getLeavesOfType('design-redux-graph-3d')[0];
+        const view = leaf && leaf.view;
+        if (!view || !view.canvas || !view.screen) return null;
+        // How much of the canvas is painted in something other than the ground: the spheres and the lines.
+        const c = view.canvas;
+        const data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        const ground = [data[0], data[1], data[2]];
+        let painted = 0;
+        for (let i = 0; i < data.length; i += 16) if (Math.abs(data[i] - ground[0]) + Math.abs(data[i + 1] - ground[1]) + Math.abs(data[i + 2] - ground[2]) > 60) painted++;
+        const radii = view.space.nodes.map((_, i) => view.r(i));
+        return { links: view.space.links.length, painted: painted / (data.length / 16), smallest: Math.min(...radii), largest: Math.max(...radii) };
+      }),
+      (v) => v && v.links > 0
     );
-    expect(type).toBeGreaterThan(0);
-    await browser.pause(1500);
+    expect(seen.links).toBeGreaterThanOrEqual(14);
+    expect(seen.painted).toBeGreaterThan(0.005);
+    expect(seen.smallest).toBeGreaterThanOrEqual(3);
+    expect(seen.largest).toBeGreaterThan(seen.smallest);
+    await browser.pause(500);
     await shot('graph-3d');
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.getLeavesOfType('design-redux-graph-3d').forEach((l) => l.detach());
+      const f = app.vault.getAbstractFileByPath('Graph');
+      if (f) await app.vault.delete(f, true);
+    });
   });
 
   it('turns routes on the real graph on and off without errors', async function () {
