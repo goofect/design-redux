@@ -204,7 +204,7 @@ export class NoteHtml extends Feature {
     clearTimeout(this.pending);
     this.pending = setTimeout(() => {
       this.refocus = { path: ctx.sourcePath, line: info.lineStart, index };
-      this.app.vault.process(file, (text) => {
+      this.plugin.notes.editText(file, (text) => {
         const lines = text.split('\n');
         const before = lines.slice(0, info.lineStart).join('\n').length + (info.lineStart ? 1 : 0);
         const block = lines.slice(info.lineStart, info.lineEnd + 1).join('\n');

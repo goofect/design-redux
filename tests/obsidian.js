@@ -106,6 +106,9 @@ class Vault extends Events {
     file.stat.size = String(text).length;
     this.trigger('modify', file);
     this.app.metadataCache.trigger('changed', file, text, this.app.metadataCache.getFileCache(file));
+    // As Obsidian does: once a change is read, its links are resolved again, and that is said too.
+    this.app.metadataCache.trigger('resolve', file);
+    this.app.metadataCache.trigger('resolved');
   }
   async process(file, fn) { const next = fn(this.text.get(file.path)); await this.modify(file, next); return next; }
   async rename(item, to) {

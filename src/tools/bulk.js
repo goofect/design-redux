@@ -126,7 +126,7 @@ export class Bulk {
     for (const t of last.texts) {
       // A note's text is put back only if nothing has been written in it since; its properties stay as they are now.
       const body = (text) => text.replace(FRONTMATTER, '');
-      await this.plugin.app.vault.process(t.file, (now) => (body(now) === body(t.after) ? (FRONTMATTER.exec(now) || [''])[0] + body(t.before) : now));
+      await this.plugin.notes.editText(t.file, (now) => (body(now) === body(t.after) ? (FRONTMATTER.exec(now) || [''])[0] + body(t.before) : now));
     }
     await this.plugin.notes.undo(last.records);
     new Notice(`Undone: ${last.title}.`);

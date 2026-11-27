@@ -165,6 +165,14 @@ export class Notes {
     return record;
   }
 
+  /**
+   * Changes a note's text: `change(text)` returns the new text, read and written in one step
+   * (Obsidian's vault.process), so nothing typed in between is lost. Resolves the text written.
+   */
+  editText(file, change) {
+    return this.app.vault.process(file, change);
+  }
+
   /** Takes back writes. Returns how many values were left alone because they had been edited since. */
   async undo(records) {
     let kept = 0;

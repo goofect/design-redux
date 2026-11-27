@@ -139,7 +139,7 @@ export class NotePages extends Feature {
     const name = await ask(this.app, { title: 'A new page', placeholder: 'Sources', action: 'Add page', check: (v) => (/%%/.test(v) ? 'A page’s name can’t hold %%.' : null) });
     if (!name) return null;
     let made = null;
-    await this.app.vault.process(file, (text) => {
+    await this.plugin.notes.editText(file, (text) => {
       const out = addPage(text, name);
       made = out.name;
       return out.text;
@@ -153,11 +153,11 @@ export class NotePages extends Feature {
     menu.addItem((i) => i.setTitle('Rename page…').setSection('action').onClick(async () => {
       const to = await ask(this.app, { title: 'Rename page', value: name, action: 'Rename' });
       if (!to || to === name) return;
-      await this.app.vault.process(file, (text) => renamePage(text, name, to));
+      await this.plugin.notes.editText(file, (text) => renamePage(text, name, to));
       await this.open(file, to);
     }));
     menu.addItem((i) => i.setTitle('Join with the page before').setSection('danger').onClick(async () => {
-      await this.app.vault.process(file, (text) => removePage(text, name));
+      await this.plugin.notes.editText(file, (text) => removePage(text, name));
       new Notice(`“${name}” is part of the page before it now.`);
       await this.drawAll();
     }));

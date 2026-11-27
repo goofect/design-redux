@@ -135,9 +135,11 @@ something away.
   old key is read, migrated, or listed there as retired with why, and a
   retired key's value is dropped, never kept unread.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
-  properties (`write(file, change)` returns an undo that keeps later edits);
+  properties (`write(file, change)` returns an undo that keeps later edits)
+  and its text (`editText(file, change)`, one read-and-write);
   `plugin.files` makes, moves and restores files and folder notes;
-  `plugin.index` is what screens read of the vault instead of walking it;
+  `plugin.index` is what screens read of the vault instead of walking it,
+  its links too (`linkMaps()`, `unresolved()`);
   `plugin.selection` is the pick. Notes are never rewritten by an upgrade.
 - A screen is built only from the shared pieces in `src/ui/` (button, row,
   head, segments, field, sheet, say-so) and the plugin's

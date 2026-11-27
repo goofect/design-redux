@@ -68,7 +68,7 @@ export class GraphRoutes extends Feature {
 
   /** Leaves out (or with `restore` puts back) the long lines in every graph that is open. Returns how many graphs it reached. */
   apply(restore) {
-    const routes = redundantLinks(this.app.metadataCache.resolvedLinks || {}).map(([a, b]) => `${a}\n${b}`);
+    const routes = redundantLinks(this.plugin.index.linkMaps().resolved).map(([a, b]) => `${a}\n${b}`);
     let reached = 0;
     GRAPH_TYPES.forEach((type) => this.app.workspace.getLeavesOfType(type).forEach((leaf) => {
       const gone = new Set(restore || !this.active(type) ? [] : routes);

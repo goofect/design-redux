@@ -101,6 +101,11 @@ export class LibraryIndex {
     return this.links;
   }
 
+  /** The links that lead nowhere, by the note they are in: { path: { link: count } }. */
+  unresolved() {
+    return this.app.metadataCache.unresolvedLinks || {};
+  }
+
   /** The notes that link to a file. */
   incoming(file) {
     return (this.linkMaps().incoming.get(file.path) || []).map((p) => this.app.vault.getFileByPath(p)).filter(Boolean);

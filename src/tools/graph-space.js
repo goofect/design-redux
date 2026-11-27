@@ -11,7 +11,7 @@
 
 /** { nodes: [{ id, name, degree }], links: [[i, j]] }. `around` (a file) keeps what is within `depth` links of it. */
 export function graphSpace(plugin, around, depth = 2) {
-  const resolved = plugin.app.metadataCache.resolvedLinks || {};
+  const resolved = plugin.index.linkMaps().resolved;
   let files = plugin.index.markdown();
   if (around) {
     const near = new Set([around.path]);
