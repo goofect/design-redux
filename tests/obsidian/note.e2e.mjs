@@ -425,6 +425,33 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('laid-out');
   });
 
+  it('runs the guides of a list written as text on through its blank lines, where its items start, and none of Obsidian\'s at its own tab stops there', async function () {
+    // As the person writes it: blank lines between an item's parts, some empty, some only the indent.
+    const text = '2. [[Division]]\n\ti. **Summary**\n\tWords.\n\n\t2.1. [[Concurrent]]\n\t\ti. **Summary**\n\t\tMore words.\n\t\t\n\t\tii. **Internal**\n\t\t\n\t\tiii. **Upstream**\n\nAfter.\n';
+    await browser.executeObsidian(async ({ app }, text) => {
+      const file = await app.vault.create(`Politics/Guides ${Date.now()}.md`, text);
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source', source: false } });
+      app.workspace.activeEditor.editor.setCursor({ line: 12, ch: 0 });
+    }, text);
+    const seen = await readUntil(() => browser.execute(() => {
+      const lines = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-content > .cm-line'));
+      const xs = (line) => Array.from(line.querySelectorAll('.dr-indent-guide')).map((g) => Math.round(g.getBoundingClientRect().right));
+      const blank = lines.filter((l) => !l.textContent.trim());
+      return {
+        lines: lines.length,
+        items: lines.filter((l) => l.textContent.trim()).map(xs),
+        blank: blank.map(xs),
+        obsidian: blank.map((l) => l.querySelectorAll('.cm-indent').length),
+      };
+    }), (v) => v.lines >= 13 && v.blank.some((g) => g.length));
+    const known = new Set(seen.items.flat());
+    // Every guide on a blank line stands where one stands on the lines around it; the blank lines between the parts have them, the one after the list none.
+    seen.blank.flat().forEach((x) => expect([x, [...known].some((k) => Math.abs(k - x) <= 1)]).toEqual([x, true]));
+    expect(seen.blank.map((g) => g.length)).toEqual([1, 2, 2, 0, 0]);
+    expect(seen.obsidian.every((n) => n === 0)).toBe(true);
+    await shot('guides-through-blank-lines');
+  });
+
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {
     // A note of its own each try, so a second try starts where the first did.
     const path = await browser.executeObsidian(async ({ app }) => {

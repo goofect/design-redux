@@ -137,4 +137,22 @@ export class OutlineLayout {
     for (let p = this.parent(n); p >= 0; p = this.parent(p)) out.unshift(p);
     return out;
   }
+
+  /**
+   * A blank line's guides: the items both the line above it and the line below are in, outermost
+   * first, so a guide runs on through the blank lines between an item's parts and stops where its
+   * list does. None when the blank line is not between two lines laid out here.
+   */
+  blankAncestors(n) {
+    let p = n - 1;
+    while (p >= 0 && n - p < REACH && this.kind(p).kind === 'blank') p--;
+    let q = n + 1;
+    while (q < this.count && q - n < REACH && this.kind(q).kind === 'blank') q++;
+    if (p < 0 || q >= this.count || this.kind(p).kind === 'blank' || this.kind(q).kind === 'blank' || !this.ours(p) || !this.ours(q)) return [];
+    const chain = (x) => this.ancestors(x).concat(this.isItem(x) ? [x] : []);
+    const [above, below] = [chain(p), chain(q)];
+    const out = [];
+    for (let i = 0; i < Math.min(above.length, below.length) && above[i] === below[i]; i++) out.push(above[i]);
+    return out;
+  }
 }

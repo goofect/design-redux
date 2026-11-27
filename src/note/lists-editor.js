@@ -96,7 +96,18 @@ export function itemLines(state, from, to, width, tab = 4, guides = true) {
   for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
     const line = doc.line(n);
     const ws = /^[ \t]*/.exec(line.text)[0];
-    if (!line.text.trim() || ignored(state, line, ws.length)) continue;
+    if (!line.text.trim()) {
+      // A blank line inside a list laid out here: the guides of the items around it go on through it, where those
+      // items start (its spaces, if any, are the plugin's indent then, so Obsidian's guides at its own tab stops don't show).
+      const marks = guides ? layout.blankAncestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
+      if (marks.length) {
+        const indent = new Indent('0px', marks);
+        if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: indent }));
+        else out.add(line.from, line.from, Decoration.widget({ widget: indent, side: 1 }));
+      }
+      continue;
+    }
+    if (ignored(state, line, ws.length)) continue;
     const k = layout.kind(n - 1);
     if (layout.ours(n - 1)) {
       const start = layout.start(n - 1);

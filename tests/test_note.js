@@ -500,6 +500,23 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const got = [];
     for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class]);
     assert.deepStrictEqual(got, [[0, 0, 'dr-marked-item HyperMD-list-line HyperMD-list-line-1'], [0, 5, 'dr-list-prefix cm-formatting-list cm-formatting-list-ol']]);
+
+    // The guides run on through the blank lines between an item's parts, where the items around them start, and stop where the list does;
+    // a blank line's spaces are the plugin's indent then, so Obsidian's guides at its own tab stops don't show beside them.
+    const outline = '2. Division\n\ti. Summary\n\tWords\n\n\t2.1. Enumerated\n\t\ti. Summary\n\t\t\n\t\tii. Internal\n\nAfter';
+    const lines = outline.split('\n');
+    const layout = new dr.OutlineLayout((i) => lines[i] || '', lines.length, (t) => t.length * 10);
+    assert.deepStrictEqual([layout.blankAncestors(3), layout.blankAncestors(6), layout.blankAncestors(8)], [[0], [0, 4], []]);
+    const guidesOf = (from, to) => {
+      const marks = [];
+      const set = dr.itemLines(EditorState.create({ doc: outline }), 0, outline.length, (t) => t.length * 10, 4);
+      for (let it = set.iter(); it.value; it.next()) if (it.from >= from && it.from <= to && it.value.spec.widget && it.value.spec.widget.guides) marks.push([it.from, it.to, it.value.spec.widget.guides.length]);
+      return marks;
+    };
+    const at = (n) => lines.slice(0, n).reduce((sum, l) => sum + l.length + 1, 0);
+    assert.deepStrictEqual(guidesOf(at(3), at(3)), [[at(3), at(3), 1]], 'no guide through an empty line between an item\'s parts');
+    assert.deepStrictEqual(guidesOf(at(6), at(6)), [[at(6), at(6) + 2, 2]], 'a line of only spaces kept Obsidian\'s guides, or lost the plugin\'s');
+    assert.deepStrictEqual(guidesOf(at(8), at(8)), [], 'a guide ran past the end of the list');
   });
 
   await check('reading view: a code block Markdown made of lines indented under a list item is rendered as the note\'s text, a run at a time at its indent; fenced code stays code', async () => {
