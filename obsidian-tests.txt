@@ -1,0 +1,52 @@
+Running: obsidian v1.15.1 (installer: v1.15.1, platform: linux)
+
+» tests/obsidian/app.e2e.mjs
+Design Redux in Obsidian: the app
+   ✓ loads with its features, commands and views
+   ✓ draws the toggle 40 by 20, square, its knob two pixels in, on the side that is true, and apart from its track
+   ✓ puts the look on the main window, and takes it off on unload
+   ✓ puts the look on a popout window and the settings window
+   ✓ keeps the look off when the setting says theme
+   ✓ opens the library sidebar and the browse view
+   ✓ drags a note from the library as Obsidian drags its own: a link for a note or another app, the library's own path for a move
+   ✓ keeps to the parts of Obsidian and the browser it leans on: a property's type, the drag manager, full screen, the rich clipboard
+   ✓ steps to the next note in its folder on two fingers sideways over the editor, and back the other way
+   ✓ opens the page a sign-in comes back to on this machine, and a refusal in the browser leaves the vault signed out, said in a notice
+   ✓ opens a sheet as the browser's own modal dialog: named by its title, its groups disclosures, Obsidian's hotkeys held; Escape closes it
+   ✓ opens Obsidian's graph of a folder from its menu, its search the folder's path
+   ✓ fuses a folder's kin entries into one each: New, Open as, Properties
+   ✓ shows the main area's tabs as words: each as wide as its name, grey, the one in front ink; no close button, and no tab in the sidebar
+   ✓ logged no errors of its own along the way
+
+15 passing (10.6s)
+
+Running: obsidian v1.15.1 (installer: v1.15.1, platform: linux)
+
+» tests/obsidian/note.e2e.mjs
+Design Redux in Obsidian: notes and graphs
+   ✓ puts the folder over the title and the head under it, in both views, as wide as the text, scrolling with it
+   ✓ shows many page tabs whole: one the edge would cut is not drawn, and an ellipsis stands there
+   ✓ hides the other pages in reading view
+   ✓ shows every page as plain text in the file on disk
+   ✓ opens the 3D graph: notes as spheres in perspective, their links as lines
+   ✓ turns routes on the real graph on and off without errors
+   ✓ opens the map of the vault
+   ✓ goes to a footnote picked in the palette, each as it reads, with the keys back in the text
+   ✓ draws an outline (1.1., 1.2.) as Obsidian draws its own numbered lists, and leaves typing in it to Obsidian: Enter after an item is a new line, no marker
+   ✓ leaves a marker written as text alone where Markdown makes its line code (indented past its list after a blank line)
+   ✓ draws what Markdown takes for code under a list as the note's text: rendered where the cursor is not, as typed without the code's look where it is, and in reading view
+   ✓ leaves typing in a list written as text to Obsidian (Enter splits no item into a new one, nothing is counted on), and moves an item with what is under it from the palette
+   ✓ lays a list written as text out under the words: every line under an item, drawn by Obsidian or as text, starts where that item's words do
+   ✓ draws an outline's guides as the outline means them, in every look and mode: one under each item a line is under, all the same distance from their markers, none across a blank line
+   ✓ checks a note's indent guides by command: nothing to mend on a sound one; a broken one listed, with a report that shows each line's indent
+   ✓ gives a blank line of a list written as text the guides of its indent, an empty one none, Obsidian's at its own tab stops neither, and leaves the caret and typing Obsidian's
+   ✓ numbers Obsidian's own lists as the note's numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view
+   ✓ keeps a folded section the footnotes leave alone folded when they are put in order
+   ✓ offers the values used for a property under its field in the head, and writes the one taken with Enter
+   ✓ edits a date in the browser's own date field, in the plugin's face and with no glyph, and turns a yes or no where it stands
+   ✓ draws the HTML a note holds in reading view: a heading group's line grey, a disclosure with no triangle (with the look on Obsidian's own regions), a progress bar the keys set and write into the text
+   ✓ opens what a link in a property's value links to when it is pressed
+   ✓ adds a property where the properties stand: a row at the ledger's foot, typed with the keys, its name offered, Enter to the value and Enter writes it
+   ✓ logged no errors of its own along the way
+
+24 passing (1m 20.2s)

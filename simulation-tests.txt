@@ -1,0 +1,14 @@
+pass  test_backup.js         1.4s  backup: 13 passed
+pass  test_contract.js       0.6s  contract: 81 commands (53 of the old plugin's), 7 views, 25 settings, 26 features; budgets kept
+pass  test_core.js           1.0s  core: 14 passed
+pass  test_design.js         0.6s  design: 5 passed
+pass  test_folders.js        0.7s  folders: 5 passed
+pass  test_glyphs.js         0.2s  glyphs: 7 glyphs keep the grammar (5 checks)
+pass  test_library.js        1.5s  library: 14 passed
+pass  test_note.js           2.4s  note: 23 passed
+pass  test_reset.js          0.8s  reset: 10 passed
+pass  test_tokens.js         0.1s  tokens: 13 parts keep the design's rules; the palette measures up (7 checks)
+pass  test_tools.js          1.8s  tools: 15 passed
+pass  test_ui.js             0.6s  ui: 11 passed
+
+12 of 12 suites passed in 3.3s
