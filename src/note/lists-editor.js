@@ -24,6 +24,9 @@ import { OutlineLayout, placeCss } from './outline-layout.js';
 
 // The marker as Obsidian marks a number of its own lists: grey, set in by the live preview's inset.
 const PREFIX = Decoration.mark({ class: 'dr-list-prefix cm-formatting-list cm-formatting-list-ol' });
+// A blank line of spaces in a list laid out here: Obsidian's guides on its spaces (at its tab stops) given no width, through
+// its own variable on the line; the plugin's guides on it carry the editor's own width (Indent's `own`).
+const BLANK_LINE = Decoration.line({ class: 'dr-blank-line', attributes: { style: '--indentation-guide-width: 0px' } });
 
 /**
  * Whether a line's text is in code, maths, a comment or frontmatter, by
@@ -50,11 +53,12 @@ function ignored(state, line, indent) {
  */
 /** A line's indent, drawn as wide as the layout says, with Obsidian's indentation guide under each item it is in. */
 export class Indent extends WidgetType {
-  constructor(width, guides) {
+  constructor(width, guides, own = false) {
     super();
     this.width = width;
     this.guides = guides;
-    this.key = [width].concat(guides).join('|');
+    this.own = own;
+    this.key = [width, own].concat(guides).join('|');
   }
 
   eq(other) {
@@ -66,10 +70,13 @@ export class Indent extends WidgetType {
     const span = doc.createElement('span');
     span.className = 'dr-indent';
     span.style.setProperty('--dr-x', this.width);
+    // On a line that gives Obsidian's guides no width, the plugin's take the width the editor gives them.
+    const width = this.own ? getComputedStyle(view.contentDOM).getPropertyValue('--indentation-guide-width').trim() || '1px' : null;
     this.guides.forEach((at) => {
       const guide = span.appendChild(doc.createElement('span'));
       guide.className = 'dr-indent-guide';
       guide.style.setProperty('--dr-at', at);
+      if (width) guide.style.setProperty('--dr-guide-width', width);
     });
     return span;
   }
@@ -98,13 +105,13 @@ export function itemLines(state, from, to, width, tab = 4, guides = true) {
     const ws = /^[ \t]*/.exec(line.text)[0];
     if (!line.text.trim()) {
       // A blank line inside a list laid out here: the guides of the items around it go on through it, where those
-      // items start. Its spaces, if any, are the plugin's indent then, as wide as the words typed on it would stand
-      // (so the caret waits there, not at the margin), and Obsidian's guides at its own tab stops don't show.
+      // items start, drawn after its spaces. Its spaces stay text, so the caret goes into them and after them as
+      // the person expects and typing keeps the indent; Obsidian's own guides on them, at its tab stops rather than
+      // where the items start, are given no width there (through its own variable, on the line).
       const marks = guides ? layout.blankAncestors(n - 1).map((a) => placeCss(layout.start(a))) : [];
       if (marks.length) {
-        const indent = new Indent(ws.length ? placeCss(layout.blankStart(n - 1)) : '0px', marks);
-        if (ws.length) out.add(line.from, line.from + ws.length, Decoration.replace({ widget: indent }));
-        else out.add(line.from, line.from, Decoration.widget({ widget: indent, side: 1 }));
+        if (ws.length) out.add(line.from, line.from, BLANK_LINE);
+        out.add(line.to, line.to, Decoration.widget({ widget: new Indent('0px', marks, ws.length > 0), side: 1 }));
       }
       continue;
     }

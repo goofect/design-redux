@@ -507,8 +507,6 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const lines = outline.split('\n');
     const layout = new dr.OutlineLayout((i) => lines[i] || '', lines.length, (t) => t.length * 10);
     assert.deepStrictEqual([layout.blankAncestors(3), layout.blankAncestors(6), layout.blankAncestors(8)], [[0], [0, 4], []]);
-    // A blank line of spaces starts where words typed on it would: under its item's words, not at the margin.
-    assert.deepStrictEqual(layout.blankStart(6), layout.words(4));
     const guidesOf = (from, to) => {
       const marks = [];
       const set = dr.itemLines(EditorState.create({ doc: outline }), 0, outline.length, (t) => t.length * 10, 4);
@@ -517,7 +515,11 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     };
     const at = (n) => lines.slice(0, n).reduce((sum, l) => sum + l.length + 1, 0);
     assert.deepStrictEqual(guidesOf(at(3), at(3)), [[at(3), at(3), 1]], 'no guide through an empty line between an item\'s parts');
-    assert.deepStrictEqual(guidesOf(at(6), at(6)), [[at(6), at(6) + 2, 2]], 'a line of only spaces kept Obsidian\'s guides, or lost the plugin\'s');
+    assert.deepStrictEqual(guidesOf(at(6), at(6) + 2), [[at(6) + 2, at(6) + 2, 2]], 'a line of only spaces lost the plugin\'s guides');
+    // Its spaces stay text (the caret goes into them, and typing keeps the indent); the line gives Obsidian's guides on them no width.
+    const blankLines = [];
+    for (let it = dr.itemLines(EditorState.create({ doc: outline }), 0, outline.length, (t) => t.length * 10, 4).iter(); it.value; it.next()) if (it.value.spec.class === 'dr-blank-line') blankLines.push(it.from);
+    assert.deepStrictEqual(blankLines, [at(6)]);
     assert.deepStrictEqual(guidesOf(at(8), at(8)), [], 'a guide ran past the end of the list');
   });
 

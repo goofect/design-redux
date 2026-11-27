@@ -441,7 +441,8 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
         lines: lines.length,
         items: lines.filter((l) => l.textContent.trim()).map(xs),
         blank: blank.map(xs),
-        obsidian: blank.map((l) => l.querySelectorAll('.cm-indent').length),
+        // Obsidian's own guides on a blank line's spaces, drawn with any width (they stand at its tab stops, not where the items start).
+        obsidian: blank.map((l) => Array.from(l.querySelectorAll('.cm-indent')).filter((s) => parseFloat(getComputedStyle(s, '::before').borderInlineEndWidth) > 0).length),
         // A blank line keeps a line's height: it is the gap the person wrote.
         heights: blank.map((l) => Math.round(l.getBoundingClientRect().height)),
         line: Math.round(lines.find((l) => l.textContent.includes('Words')).getBoundingClientRect().height),
@@ -473,8 +474,23 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       range.setStart(text, text.data.indexOf('More'));
       range.setEnd(text, text.data.indexOf('More') + 1);
       return Math.round(caret - range.getBoundingClientRect().left);
-    }), (d) => Math.abs(d) <= 2, 3000);
-    expect([gap, Math.abs(gap) <= 2]).toEqual([gap, true]);
+    }), (d) => Math.abs(d) <= 24, 3000);
+    // After the spaces, which stay text: by the words, within one indent of them, not at the margin.
+    expect([gap, Math.abs(gap) <= 24]).toEqual([gap, true]);
+    // A click on a blank line, then typing: the indent is kept, the words go after it.
+    await browser.keys(['Escape']);
+    const target = await browser.executeObsidian(({ app }) => {
+      const e = app.workspace.activeEditor.editor;
+      const n = e.getValue().split('\n').findIndex((l, i, all) => !l.trim() && l.length && all[i + 1] && all[i + 1].includes('Internal'));
+      const view = e.cm;
+      const line = view.state.doc.line(n + 1);
+      const box = view.coordsAtPos(line.to);
+      return { n, x: Math.round(box.left + 40), y: Math.round((box.top + box.bottom) / 2) };
+    });
+    await browser.performActions([{ type: 'pointer', id: 'mouse', parameters: { pointerType: 'mouse' }, actions: [{ type: 'pointerMove', x: target.x, y: target.y, origin: 'viewport' }, { type: 'pointerDown', button: 0 }, { type: 'pointerUp', button: 0 }] }]);
+    await browser.keys(['W', 'o', 'r', 'd']);
+    const typed = await readUntil(() => browser.executeObsidian(({ app }, n) => app.workspace.activeEditor.editor.getLine(n), target.n), (l) => l.includes('Word'), 3000);
+    expect(typed).toBe('\t\tWord');
   });
 
   it('numbers Obsidian\'s own lists as the note\'s numbering says: Obsidian keeps the list (Enter, its numbers, folding, collapsing) and the labels follow it, in live preview and reading view', async function () {

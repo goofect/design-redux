@@ -138,12 +138,6 @@ export class OutlineLayout {
     return out;
   }
 
-  /** Where a blank line inside a list would start, were words typed on it: under the words of the item it is in, by its indent. */
-  blankStart(n) {
-    const p = this.parent(n);
-    return p >= 0 ? this.words(p) : { px: 0, insets: 0, indents: Math.round(lead(this.lineOf(n)) / 4) };
-  }
-
   /**
    * A blank line's guides: the items both the line above it and the line below are in, outermost
    * first, so a guide runs on through the blank lines between an item's parts and stops where its
