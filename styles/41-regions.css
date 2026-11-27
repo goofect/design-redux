@@ -6,6 +6,8 @@
 /*   ::selection                        selected text                  */
 /*   button:not(.clickable-icon)  button.mod-cta  button.mod-warning   */
 /*   .markdown-rendered mark  .cm-s-obsidian span.cm-highlight         */
+/*   .markdown-rendered details > summary  hgroup > p                  */
+/*   .markdown-rendered progress  .markdown-source-view progress       */
 /* Every rule is gated by the master switch and its region. The rest   */
 /* of each region comes from 01-obsidian-map.css.                      */
 /* ------------------------------------------------------------------ */
@@ -50,4 +52,52 @@ body.dr-active.dr-region-editor .cm-s-obsidian span.cm-highlight {
   color: var(--dr-ink);
   text-decoration: underline;
   text-decoration-thickness: var(--dr-ring);
+}
+
+/* The HTML a note holds, in the look. A disclosure's summary is pressed itself: no triangle, and
+   folded, an ellipsis after its words. A heading group's line under the heading is grey. */
+body.dr-active.dr-region-editor .markdown-rendered details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+body.dr-active.dr-region-editor .markdown-rendered details > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.dr-active.dr-region-editor .markdown-rendered details:not([open]) > summary::after {
+  content: "…";
+}
+
+body.dr-active.dr-region-editor .markdown-rendered hgroup > :first-child {
+  margin-bottom: 0;
+}
+
+body.dr-active.dr-region-editor .markdown-rendered hgroup > p {
+  margin-top: 0;
+  color: var(--dr-muted);
+}
+
+/* A progress bar: what is done in ink, what is not in grey; square, a unit high. */
+body.dr-active.dr-region-editor .markdown-rendered progress,
+body.dr-active.dr-region-editor .markdown-source-view progress {
+  appearance: none;
+  width: calc(30 * var(--dr-u));
+  max-width: 100%;
+  height: var(--dr-u);
+  border: 0;
+  border-radius: 0;
+  vertical-align: middle;
+}
+
+body.dr-active.dr-region-editor .markdown-rendered progress::-webkit-progress-bar,
+body.dr-active.dr-region-editor .markdown-source-view progress::-webkit-progress-bar {
+  border-radius: 0;
+  background-color: var(--dr-muted);
+}
+
+body.dr-active.dr-region-editor .markdown-rendered progress::-webkit-progress-value,
+body.dr-active.dr-region-editor .markdown-source-view progress::-webkit-progress-value {
+  border-radius: 0;
+  background-color: var(--dr-ink);
 }

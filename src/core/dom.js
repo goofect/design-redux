@@ -90,3 +90,17 @@ export async function clipboardText() {
     return '';
   }
 }
+
+/**
+ * Names a region for a screen reader without an aria-label: Obsidian draws a
+ * tooltip for every aria-label under the pointer. The name is unseen text the
+ * region points at instead, kept in `holder` (the region itself unless it is
+ * emptied on each draw, or is a list, which holds only its items).
+ */
+let named = 0;
+export function nameRegion(node, text, holder = node) {
+  const label = el(holder, 'span', 'dr-unseen', text);
+  label.id = `dr-region-name-${++named}`;
+  node.setAttribute('aria-labelledby', label.id);
+  return node;
+}

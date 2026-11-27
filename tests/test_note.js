@@ -6,13 +6,13 @@
  */
 const assert = require('assert');
 const { EditorState } = require('@codemirror/state');
-const { load, world, suite, settle, obsidian } = require('./harness.js');
+const { load, world, suite, settle, obsidian, front, overlays } = require('./harness.js');
 const { editor } = require('./editor.js');
 
 const dr = load();
 const check = suite('note');
 const feature = (w, name) => w.plugin.features.find((f) => f.constructor.name === name);
-const answer = async (w, value) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; m.contentEl.querySelector('input').value = value; m.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click(); await settle(); };
+const answer = async (w, value) => { await settle(); const m = front(); m.contentEl.querySelector('input').value = value; m.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click(); await settle(); };
 const PAGED = '---\nstatus: draft\n---\n%%page: Notes%%\n# Notes\nfirst\n\n```\n%%page: not one%%\n```\n%%page: Proofs%%\nsecond\n%%page: Notes%%\nthird\n';
 const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); await leaf.openFile(w.file(path)); if (ed) leaf.view.editor = ed; await settle(); return leaf.view; };
 
@@ -106,6 +106,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     feature(w, 'NotePage').draw(view);
     assert.deepStrictEqual(order('.cm-sizer'), ['folder', 'title', 'properties', 'head', 'text']);
     const head = view.contentEl.querySelector('.dr-note-head');
+    // The note's header under its title: its properties a section, its pages a navigation, each named; the folder over the title a navigation.
+    assert.deepStrictEqual([head.tagName, head.querySelector('.dr-note-props').tagName, head.querySelector('.dr-note-pages').tagName, view.contentEl.querySelector('.dr-note-place').tagName], ['HEADER', 'SECTION', 'NAV', 'NAV']);
+    assert.strictEqual(w.doc.getElementById(head.querySelector('.dr-note-props').getAttribute('aria-labelledby')).textContent, 'Properties');
     assert.strictEqual(view.contentEl.querySelector('.dr-note-folder').textContent, 'Logic');
     // The properties as the ledger: a ruled row each, name and value, no box, no heading, no button.
     const ledger = () => Array.from(head.querySelectorAll('.dr-note-props .dr-ledger > .dr-prop')).map((c) => [c.dataset.key, c.querySelector('.dr-prop-value').textContent]);
@@ -205,7 +208,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     };
     const adding = dr.addProperty(w.plugin, file);
     await settle();
-    const field = obsidian.Modal.open[obsidian.Modal.open.length - 1].contentEl.querySelector('input');
+    const field = front().contentEl.querySelector('input');
     assert.strictEqual(paste(field, 'author: Frege'), false, 'one line pasted was not left as text');
     assert.strictEqual(paste(field, 'author: Frege\nborn: 1848\n'), true);
     await adding;
@@ -243,14 +246,14 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     ed.setValue(`${ed.text}[^3]: spare\n`);
     w.app.commands.executeCommandById('design-redux:show-footnotes');
     await settle();
-    const m = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    const m = front();
     assert.deepStrictEqual(m.getItems().map((i) => m.getItemText(i)), ['1  Hume, An Enquiry 1748', '2  old', '3  spare  (used nowhere)']);
     m.pick(m.getItems()[1]);
     await settle();
     assert.deepStrictEqual(ed.getCursor(), { line: 0, ch: 15 });
     w.app.commands.executeCommandById('design-redux:show-footnotes');
     await settle();
-    const again = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    const again = front();
     again.pick(again.getItems()[2]);
     await settle();
     assert.deepStrictEqual(ed.getCursor(), { line: 4, ch: 0 });
@@ -270,7 +273,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     });
     const ed = editor('Claim. More[^1].\n\n[^1]: old\n', { line: 0, ch: 6 });
     await open(w, 'A.md', ed);
-    const pickSource = async (name) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; const items = m.getItems(); assert.ok(!items.some((s) => s.file.path === 'A.md'), 'the note itself offered'); m.pick(items.find((s) => s.file.basename === name)); await settle(); return items.map((s) => m.getItemText(s)); };
+    const pickSource = async (name) => { await settle(); const m = front(); const items = m.getItems(); assert.ok(!items.some((s) => s.file.path === 'A.md'), 'the note itself offered'); m.pick(items.find((s) => s.file.basename === name)); await settle(); return items.map((s) => m.getItemText(s)); };
     const cite = async (name, where) => { w.app.commands.executeCommandById('design-redux:cite-source'); const offered = await pickSource(name); await answer(w, where); return offered; };
     assert.deepStrictEqual((await cite('Federalist', 'no. 10')).slice(0, 2), ['David Hume, An Enquiry: Concerning Human Understanding, 1748', 'Alexander Hamilton et al., Federalist, 1788']);
     assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: Alexander Hamilton et al., [[Sources/Federalist]], 1788, no. 10\n[^2]: old\n');
@@ -296,7 +299,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     await w.app.workspace.getLeaf().openFile(w.file('Sources/Enquiry.md'));
     w.app.commands.executeCommandById('design-redux:notes-citing-this');
     await settle();
-    const m = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    const m = front();
     assert.deepStrictEqual(m.getItems().map((i) => m.getItemText(i)).sort(), ['A', 'B']);
     m.pick(m.getItems().find((i) => i.note.path === 'A.md'));
     await settle();
@@ -354,7 +357,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const p = w.doc.createElement('p');
     p.appendChild(w.doc.createTextNode('E = mc^2^, H~2~O, the 1st, '));
     p.appendChild(w.doc.createElement('code')).textContent = 'a^b^';
-    feature(w, 'Scripts').render(p);
+    feature(w, 'NoteHtml').render(p);
     assert.deepStrictEqual(Array.from(p.querySelectorAll('sup, sub')).map((e) => `${e.tagName}:${e.textContent}`), ['SUP:2', 'SUB:2']);
     assert.strictEqual(p.textContent, 'E = mc2, H2O, the 1st, a^b^');
   });
@@ -595,7 +598,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
 
   await check('a property added where the properties stand: a row at the ledger\'s foot, Enter from the name to the value and Enter writes it; a name the note has is said in red; Escape takes it away; with none, the row is the ledger', async () => {
     const w = await world({ 'Logic/A.md': '---\nstatus: draft\n---\n', 'Logic/B.md': '---\ncourse: Logic\n---\n', 'Logic/C.md': 'x' });
-    const sheets = obsidian.Modal.open.length;
+    const sheets = overlays().length;
     const run = () => w.app.commands.commands['design-redux:add-property'].checkCallback(false);
     const key = (input, k) => input.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
     const typed = (input, text) => { input.value = text; input.dispatchEvent(new window.Event('input', { bubbles: true })); };
@@ -604,7 +607,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     run();
     const row = fresh();
     assert.ok(row && row.previousElementSibling.dataset.key === 'status', 'the new row is not at the ledger\'s foot');
-    assert.strictEqual(obsidian.Modal.open.length, sheets, 'a sheet opened');
+    assert.strictEqual(overlays().length, sheets, 'a sheet opened');
     const [name, value] = row.querySelectorAll('input');
     assert.deepStrictEqual([w.doc.activeElement, name.placeholder, value.placeholder], [name, 'name', 'value']);
     typed(name, 'status');
@@ -713,7 +716,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     delete w.app.metadataTypeManager;
   });
 
-  await check('a note out of the vault: copied as formatted text and as its Markdown, read aloud a block at a time and stopped; its properties left out', async () => {
+  await check('a note out of the vault: copied as formatted text and as its Markdown, its properties left out', async () => {
     const w = await world({ 'A.md': '---\nstatus: draft\n---\n# Title\n\nA line with [[B]].\n' });
     const file = w.file('A.md');
     const out = feature(w, 'NoteOut');
@@ -727,17 +730,64 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const plain = await written[0].items['text/plain'].text();
     assert.ok(html.includes('# Title') && !html.includes('status'), `the formatted copy was ${html}`);
     assert.strictEqual(plain, '# Title\n\nA line with [[B]].\n');
-    const said = [];
-    window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
-    window.speechSynthesis = { speaking: false, pending: false, speak: (u) => { said.push(u.text); window.speechSynthesis.speaking = true; }, cancel: () => { window.speechSynthesis.speaking = false; } };
-    assert.strictEqual(await out.readAloud(file), 1);
-    assert.deepStrictEqual(said, ['# Title A line with [[B]].']);
-    assert.ok(w.app.commands.commands['design-redux:stop-reading'].checkCallback(true), 'stop was not offered while reading');
-    w.app.commands.commands['design-redux:stop-reading'].checkCallback(false);
-    assert.strictEqual(window.speechSynthesis.speaking, false);
-    assert.strictEqual(w.app.commands.commands['design-redux:stop-reading'].checkCallback(true), false);
-    delete window.speechSynthesis;
-    assert.strictEqual(w.app.commands.commands['design-redux:read-note-aloud'].checkCallback(true), false, 'reading was offered with no voice');
+  });
+
+  await check('the HTML a note holds: a disclosure round the selection and taken off, a heading group and taken apart, a progress bar inserted and stepped; in reading view a bar is a slider whose keys write its value into the text', async () => {
+    // A disclosure: the first line the summary (a heading's marks left off), the rest Markdown still; the same command opens it again.
+    const folded = dr.toggleDetails('## Proof\nBy induction.\n\nDone.');
+    assert.strictEqual(folded, '<details>\n<summary>Proof</summary>\n\nBy induction.\n\nDone.\n\n</details>');
+    assert.strictEqual(dr.toggleDetails(folded), 'Proof\nBy induction.\n\nDone.');
+    assert.strictEqual(dr.toggleDetails('a < b'), '<details>\n<summary>a &lt; b</summary>\n\n\n\n</details>');
+    // A heading group: the heading and the line under it; only a heading starts one.
+    const grouped = dr.toggleHeadingGroup('## Logic\nA first course');
+    assert.strictEqual(grouped, '<hgroup>\n<h2>Logic</h2>\n<p>A first course</p>\n</hgroup>');
+    assert.strictEqual(dr.toggleHeadingGroup(grouped), '## Logic\nA first course');
+    assert.strictEqual(dr.toggleHeadingGroup('plain\nline'), null);
+    // A progress bar: found, set within its most, on its steps.
+    const text = `a ${dr.progressTag(3, 10)} b <progress max="1" value="0.2"></progress>`;
+    assert.deepStrictEqual(dr.progressBars(text).map((b) => [b.value, b.max]), [[3, 10], [0.2, 1]]);
+    assert.deepStrictEqual(dr.progressBars(dr.setProgress(text, 0, 14)).map((b) => b.value), [10, 0.2]);
+    assert.deepStrictEqual(dr.progressBars(dr.setProgress(text, 1, 0.3)).map((b) => b.value), [3, 0.3]);
+    assert.strictEqual(dr.clampProgress(-2, 10), 0);
+
+    const w = await world({ 'A.md': '# Plan\n\nDone so far: <progress value="2" max="5"></progress>\n' });
+    const html = feature(w, 'NoteHtml');
+    const run = (id, ed) => { w.app.workspace.activeEditor = { editor: ed }; return html.actions().find((a) => a.id === id).run({ editor: ed }); };
+    const ed = editor('## Logic\nA first course\n\nText', { line: 0, ch: 3 });
+    run('group-heading', ed);
+    assert.strictEqual(ed.getValue(), '<hgroup>\n<h2>Logic</h2>\n<p>A first course</p>\n</hgroup>\n\nText');
+    ed.setCursor({ line: 1, ch: 2 });
+    run('group-heading', ed);
+    assert.strictEqual(ed.getValue(), '## Logic\nA first course\n\nText');
+    const bar = editor('', { line: 0, ch: 0 });
+    run('insert-progress', bar);
+    bar.setCursor({ line: 0, ch: 3 });
+    run('progress-up', bar);
+    run('progress-up', bar);
+    run('progress-down', bar);
+    assert.strictEqual(bar.getValue(), '<progress value="1" max="10"></progress>');
+    const sel = editor('Title line\nbody', { line: 0, ch: 0 });
+    sel.setSelection({ line: 0, ch: 0 }, { line: 1, ch: 4 });
+    run('disclose-selection', sel);
+    assert.strictEqual(sel.getValue(), '<details>\n<summary>Title line</summary>\n\nbody\n\n</details>');
+
+    // Reading view: the block Obsidian drew from lines 2 to 2, its bar a slider; the keys set it, and the value is written once they rest.
+    const block = w.doc.createElement('div');
+    const p = block.appendChild(w.doc.createElement('p'));
+    const drawn = p.appendChild(w.doc.createElement('progress'));
+    drawn.max = 5;
+    drawn.value = 2;
+    html.controlBars(block, { sourcePath: 'A.md', getSectionInfo: () => ({ lineStart: 2, lineEnd: 2 }) });
+    assert.deepStrictEqual([drawn.getAttribute('role'), drawn.getAttribute('tabindex'), drawn.getAttribute('aria-valuenow'), drawn.getAttribute('aria-valuemax')], ['slider', '0', '2', '5']);
+    const key = (k) => drawn.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    key('ArrowRight');
+    key('ArrowRight');
+    assert.strictEqual(drawn.getAttribute('aria-valuenow'), '4');
+    await new Promise((r) => setTimeout(r, 350));
+    assert.strictEqual(await w.app.vault.read(w.file('A.md')), '# Plan\n\nDone so far: <progress value="4" max="5"></progress>\n');
+    key('End');
+    await new Promise((r) => setTimeout(r, 350));
+    assert.ok((await w.app.vault.read(w.file('A.md'))).includes('value="5"'), 'End did not fill the bar');
   });
 
   check.done();

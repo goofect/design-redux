@@ -8,7 +8,7 @@
  * at once.
  */
 const assert = require('assert');
-const { load, world, suite, settle, obsidian } = require('./harness.js');
+const { load, world, suite, settle, obsidian, front } = require('./harness.js');
 
 const dr = load();
 const check = suite('library');
@@ -37,6 +37,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     const w = await world(VAULT);
     const s = sidebar(w);
     const p = await page(w, w.app.vault.getAbstractFileByPath('Logic'));
+    assert.strictEqual(p.host.querySelector('.dr-pane').tagName, 'MAIN', 'the library\'s page is not its main matter');
     const [tree, list] = [s.host.firstChild, p.host.firstChild];
     w.app.workspace.trigger('design-redux:props', w.app.vault.getMarkdownFiles()[0]);
     await settle();
@@ -238,7 +239,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     await settle();
     assert.strictEqual(dr.sortOf(w.plugin, w.file('Logic')), 'modified');
     const del = dr.deleteEntry(w.plugin, w.file('Inbox'));
-    obsidian.Modal.open[0].contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
+    front().contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
     await del;
     assert.ok(!w.file('Inbox'));
     const note = dr.noteMenu(w.plugin, w.file('Logic/Validity.md'));

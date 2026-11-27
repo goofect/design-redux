@@ -1,10 +1,9 @@
 /* ------------------------------------------------------------------ */
-/* A note, out of the vault: copied as formatted text, read aloud      */
+/* A note, out of the vault: copied as formatted text                  */
 /*                                                                     */
-/* Two of the browser's own abilities, offered as commands and in the */
-/* note's menus, nothing on the screen: the clipboard's rich text      */
-/* (pasted into mail or a document, the note keeps its headings, lists */
-/* and emphasis) and the system's voice (one paragraph at a time).     */
+/* The clipboard's rich text, offered as a command and in the note's   */
+/* menus, nothing on the screen: pasted into mail or a document, the   */
+/* note keeps its headings, lists and emphasis.                        */
 /* ------------------------------------------------------------------ */
 
 import { Component, MarkdownRenderer, Notice } from 'obsidian';
@@ -32,22 +31,7 @@ export async function renderNote(app, file) {
   return host;
 }
 
-/** The blocks of a drawn note a voice reads, one each: headings, paragraphs, list items, quotes, cells. */
-export function spokenParts(host) {
-  const blocks = Array.from(host.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, td, th'))
-    .filter((n) => !n.querySelector('p, li'))
-    .map((n) => n.textContent.replace(/\s+/g, ' ').trim());
-  const parts = blocks.filter(Boolean);
-  return parts.length ? parts : [host.textContent.replace(/\s+/g, ' ').trim()].filter(Boolean);
-}
-
-const speech = () => (typeof window !== 'undefined' && window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function' ? window.speechSynthesis : null);
-
 export class NoteOut extends Feature {
-  enable() {
-    this.add(() => this.stopReading());
-  }
-
   /** Puts the note on the clipboard twice over: as formatted text, and as its Markdown for where formatting can't go. */
   async copyFormatted(file) {
     const markdown = noteBody(await this.app.vault.cachedRead(file));
@@ -66,40 +50,9 @@ export class NoteOut extends Feature {
     }
   }
 
-  /** Reads the note aloud in the system's voice, a block at a time (a long single utterance stops partway). */
-  async readAloud(file) {
-    const voice = speech();
-    if (!voice) { new Notice('This system has no voice to read with.'); return 0; }
-    this.stopReading();
-    const parts = spokenParts(await renderNote(this.app, file));
-    if (!parts.length) { new Notice(`${file.basename} has nothing to read.`); return 0; }
-    const lang = activeDocument.documentElement.lang || undefined;
-    this.reading = file.path;
-    parts.forEach((text, i) => {
-      const said = new window.SpeechSynthesisUtterance(text);
-      if (lang) said.lang = lang;
-      if (i === parts.length - 1) said.onend = () => { if (this.reading === file.path) this.reading = null; };
-      voice.speak(said);
-    });
-    return parts.length;
-  }
-
-  stopReading() {
-    const voice = speech();
-    this.reading = null;
-    if (voice && (voice.speaking || voice.pending)) voice.cancel();
-  }
-
-  get speaking() {
-    const voice = speech();
-    return !!this.reading && !!voice && (voice.speaking || voice.pending);
-  }
-
   actions() {
     return [
       { id: 'copy-note-formatted', name: 'Copy note as formatted text', on: 'note', section: 'action', run: (ctx) => this.copyFormatted(ctx.file) },
-      { id: 'read-note-aloud', name: 'Read note aloud', on: 'note', section: 'action', when: () => !!speech(), run: (ctx) => this.readAloud(ctx.file) },
-      { id: 'stop-reading', name: 'Stop reading aloud', menu: false, when: () => this.speaking, run: () => this.stopReading() },
     ];
   }
 }

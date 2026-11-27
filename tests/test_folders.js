@@ -5,12 +5,12 @@
  * saved views; the library check.
  */
 const assert = require('assert');
-const { load, world, suite, settle, obsidian } = require('./harness.js');
+const { load, world, suite, settle, obsidian, front } = require('./harness.js');
 
 const dr = load();
 const check = suite('folders');
 const feature = (w, name) => w.plugin.features.find((f) => f.constructor.name === name);
-const answer = async (w, pick) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; pick(m); await settle(); };
+const answer = async (w, pick) => { await settle(); const m = front(); pick(m); await settle(); };
 const VAULT = {
   'Logic/Logic.md': '---\nalbum: Subject\ndescription: Arguments and their forms.\nincludes:\n  - "[[Hume]]"\nfeatured: "[[Validity]]"\nrelated: "[[Reading]]"\n---\n',
   'Logic/Truth tables.md': '---\nstatus: draft\ntags: [formal]\n---\n![[img/table.png]]\n',

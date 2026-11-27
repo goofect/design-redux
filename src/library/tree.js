@@ -8,9 +8,9 @@
 /* to open or close. Pinned first; grey, the open folder ink.          */
 /* ------------------------------------------------------------------ */
 
-import { asButton, el, flag } from '../core/dom.js';
+import { asButton, el, flag, nameRegion } from '../core/dom.js';
 import { rows } from '../ui/row.js';
-import { nameRegion, pinnedFirst, shownFolders } from './contents.js';
+import { pinnedFirst, shownFolders } from './contents.js';
 
 /** Draws the tree into `host`: the vault's folders, the path down to the open folder, and the open folder's own subfolders. The vault itself is the pane's head. */
 export function drawTree(screen, host) {
@@ -22,7 +22,7 @@ export function drawTree(screen, host) {
   const list = rows(host, { outline: true });
   list.classList.add('dr-tree');
   list.setAttribute('role', 'tree');
-  nameRegion(list, 'Folders');
+  nameRegion(list, 'Folders', host);
   const branch = (folder, depth) => {
     const kids = pinnedFirst(plugin, folder, shownFolders(plugin, folder));
     const isOpen = unfolded.has(folder.path);

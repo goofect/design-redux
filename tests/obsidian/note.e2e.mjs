@@ -557,6 +557,46 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(await browser.execute(() => !!document.querySelector('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="done"] input'))).toBe(false);
   });
 
+  it('draws the HTML a note holds in reading view: a heading group\'s line grey, a disclosure with no triangle (with the look on Obsidian\'s own regions), a progress bar the keys set and write into the text', async function () {
+    const seen = await browser.executeObsidian(async ({ app, plugins }) => {
+      // The note's own text takes the look only where it reaches Obsidian's regions.
+      plugins.designRedux.settings.lookScope = 'window';
+      await plugins.designRedux.saveSettings();
+      const text = '# HTML\n\n<hgroup>\n<h2>Logic</h2>\n<p>A first course</p>\n</hgroup>\n\n<details>\n<summary>Proof</summary>\n\nBy induction.\n\n</details>\n\nDone: <progress value="2" max="5"></progress>\n';
+      let file = app.vault.getAbstractFileByPath('Politics/Html.md');
+      if (file) await app.vault.modify(file, text);
+      else file = await app.vault.create('Politics/Html.md', text);
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'preview' } });
+      await new Promise((r) => setTimeout(r, 800));
+      const root = document.querySelector('.workspace-leaf.mod-active .markdown-reading-view');
+      const bar = root && root.querySelector('progress');
+      const sub = root && root.querySelector('hgroup > p');
+      const summary = root && root.querySelector('details > summary');
+      return {
+        bar: bar ? [bar.getAttribute('role'), bar.value, bar.max, getComputedStyle(bar).borderTopLeftRadius] : null,
+        grey: sub ? getComputedStyle(sub).color !== getComputedStyle(root.querySelector('hgroup > h2')).color : null,
+        marker: summary ? getComputedStyle(summary).listStyleType : null,
+      };
+    });
+    expect(seen.bar).toEqual(['slider', 2, 5, '0px']);
+    expect(seen.grey).toBe(true);
+    expect(seen.marker).toBe('none');
+    await shot('note-html-reading');
+    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .markdown-reading-view progress').focus());
+    await browser.keys(['ArrowRight', 'ArrowRight']);
+    const written = await readUntil(
+      () => browser.executeObsidian(({ app }) => app.vault.read(app.vault.getAbstractFileByPath('Politics/Html.md'))),
+      (t) => t.includes('value="4"')
+    );
+    expect(written).toContain('<progress value="4" max="5"></progress>');
+    const refocused = await readUntil(() => browser.execute(() => document.activeElement && document.activeElement.tagName), (t) => t === 'PROGRESS', 3000).catch(() => null);
+    expect(refocused).toBe('PROGRESS');
+    await browser.executeObsidian(async ({ plugins }) => {
+      plugins.designRedux.settings.lookScope = 'plugin';
+      await plugins.designRedux.saveSettings();
+    });
+  });
+
   it('opens what a link in a property\'s value links to when it is pressed', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);

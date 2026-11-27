@@ -205,3 +205,12 @@
   --font-monospace: var(--font-text);
 }
 
+/* A progress bar in a note the person sets: pressed along it, or the keys; focus is the outline. */
+.dr-progress {
+  cursor: pointer;
+}
+
+.dr-progress:focus-visible {
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: var(--dr-ring);
+}

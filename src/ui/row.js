@@ -4,7 +4,7 @@
 /*                                                                     */
 /* Drawn as what they are: a list is a ul of li, the properties a dl   */
 /* (each row's name a dt, its value a dd, a date a time), a section's  */
-/* title a heading.                                                    */
+/* title a heading, a group that folds a details with its summary.     */
 /* ------------------------------------------------------------------ */
 
 import { asButton, el, flag } from '../core/dom.js';
@@ -62,18 +62,22 @@ export function propRow(parent, opts) {
   return node;
 }
 
-/**
- * A section's title over its rows. { title, buttons: [what iconButton takes],
- * fold: { open, run } }. A title that folds its group is pressed itself: no
- * arrow and no button, its state in aria-expanded.
- */
+/** A section's title over its rows, a heading. { title, buttons: [what iconButton takes] }. */
 export function sectionTitle(parent, opts) {
   const node = el(parent, 'h3', 'dr-section');
-  const label = el(node, 'span', 'dr-section-name dr-muted', opts.title);
-  if (opts.fold) {
-    asButton(label, null, opts.fold.run);
-    label.setAttribute('aria-expanded', String(!!opts.fold.open));
-  }
+  el(node, 'span', 'dr-section-name dr-muted', opts.title);
   (opts.buttons || []).forEach((b) => iconButton(node, b));
+  return node;
+}
+
+/**
+ * A group that folds: the browser's own disclosure, its summary drawn as a section's title.
+ * Pressed (or Enter, or Space) it folds and unfolds; folded, an ellipsis after its words says
+ * there is more. { title, open }. Returns the details element: the group's rows go in it.
+ */
+export function disclosure(parent, opts) {
+  const node = el(parent, 'details', 'dr-group');
+  if (opts.open !== false) node.setAttribute('open', '');
+  el(el(node, 'summary', 'dr-section'), 'span', 'dr-section-name dr-muted', opts.title);
   return node;
 }

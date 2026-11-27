@@ -3,7 +3,7 @@
  * the styles read. Also: one Tab stop a list, the arrows inside it.
  */
 const assert = require('assert');
-const { load, world, suite, obsidian } = require('./harness.js');
+const { load, world, suite, obsidian, front, overlays } = require('./harness.js');
 
 const dr = load();
 const check = suite('ui');
@@ -123,20 +123,20 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
 
   await check('sheet: a question answered yes or no, a name asked for and checked', async () => {
     const yes = dr.confirm(w.app, { title: 'Delete Seminar', text: 'It goes to the bin.', action: 'Delete folder' });
-    const open = obsidian.Modal.open[0];
-    assert.deepStrictEqual([open.titleEl.textContent, open.contentEl.querySelector('.dr-sheet p').textContent, Array.from(open.contentEl.querySelectorAll('.dr-button')).map((b) => b.className)], ['Delete Seminar', 'It goes to the bin.', ['dr-button', 'dr-button']]);
+    const open = front();
+    assert.deepStrictEqual([open.dialog.querySelector('.dr-sheet-title').textContent, open.contentEl.querySelector('.dr-sheet p').textContent, Array.from(open.contentEl.querySelectorAll('.dr-button')).map((b) => b.className)], ['Delete Seminar', 'It goes to the bin.', ['dr-button', 'dr-button']]);
     open.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
     assert.strictEqual(await yes, true);
     const no = dr.confirm(w.app, { title: 'x' });
-    obsidian.Modal.open[0].close();
+    front().close();
     assert.strictEqual(await no, false);
     const named = dr.ask(w.app, { title: 'New folder', value: 'Logic', check: (v) => (v.includes(':') ? 'A name can’t hold a colon.' : null) });
-    const sheet = obsidian.Modal.open[0];
+    const sheet = front();
     const input = sheet.contentEl.querySelector('input');
     input.value = 'a:b';
     sheet.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
     await new Promise((r) => setTimeout(r, 0));
-    assert.ok(obsidian.Modal.open.includes(sheet) && sheet.contentEl.querySelector('.dr-field').getAttribute('aria-invalid') === 'true', 'a wrong name closed the sheet');
+    assert.ok(overlays().includes(sheet) && sheet.contentEl.querySelector('.dr-field').getAttribute('aria-invalid') === 'true', 'a wrong name closed the sheet');
     input.value = 'Sets';
     key(input, 'Enter');
     assert.strictEqual(await named, 'Sets');
@@ -185,6 +185,10 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.strictEqual(`${head.tagName}>${head.querySelector('.dr-head-name').tagName}`, 'HEADER>H2');
     const pressed = dr.headRow(root, { label: 'Vault', run: () => {} }).querySelector('.dr-head-name');
     assert.deepStrictEqual([pressed.tagName, pressed.getAttribute('role')], ['SPAN', 'button']);
+    // A group that folds: the browser's own disclosure, open at first, its summary a section's title.
+    const group = dr.disclosure(root, { title: 'Empty folders' });
+    assert.deepStrictEqual([group.tagName, group.hasAttribute('open'), group.firstChild.tagName, group.firstChild.textContent], ['DETAILS', true, 'SUMMARY', 'Empty folders']);
+    assert.strictEqual(dr.disclosure(root, { title: 'x', open: false }).hasAttribute('open'), false);
   });
 
   check.done();

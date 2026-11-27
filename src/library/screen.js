@@ -10,10 +10,10 @@
 /* ------------------------------------------------------------------ */
 
 import { Keymap, TFile, TFolder } from 'obsidian';
-import { clear, el } from '../core/dom.js';
+import { clear, el, nameRegion } from '../core/dom.js';
 import { headRow } from '../ui/head.js';
 import { rove } from '../ui/keys.js';
-import { drawFolderPage, nameRegion } from './contents.js';
+import { drawFolderPage } from './contents.js';
 import { folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
 import { enableDrop } from './drop.js';
@@ -140,9 +140,9 @@ export class LibraryScreen {
     const top = folder.path === '/' && !this.filter;
     // The head: the pane's name, a label.
     const name = !this.opts.wide ? 'Vault' : this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : top ? 'Vault' : folder.name;
-    // The sidebar is the library's navigation; a page is a region of its own. Named by unseen words, not an
+    // The sidebar is the library's navigation; the page is the library's main matter. Named by unseen words, not an
     // aria-label, over which Obsidian would draw a tooltip.
-    const pane = el(host, !this.opts.wide ? 'nav' : 'section', 'dr-pane');
+    const pane = el(host, !this.opts.wide ? 'nav' : 'main', 'dr-pane');
     // In the sidebar the head is the vault (pressed, it shows the vault in the page) and one word, Settings, for Obsidian's own,
     // whose button the bare workspace hides. A folder's page has no head: its path says where it is.
     const side = !this.opts.wide;

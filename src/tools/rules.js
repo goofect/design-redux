@@ -134,7 +134,7 @@ export class PropertyRules extends Feature {
       text: this.settings.propertyRulesDryRun !== false ? 'A dry run: a rule that would fire says what it would set, and sets nothing. The command “Let property rules write” makes them live.' : 'Live: a rule sets what it says, in one Undo.',
       build: (matter) => {
         const draw = () => {
-          while (matter.childNodes.length > 1) matter.removeChild(matter.lastChild);
+          while (matter.firstChild) matter.removeChild(matter.firstChild); // the matter is the rules alone: what the sheet says is in its header
           const rules = Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : [];
           if (!rules.length) sayso(matter, { label: 'No rules yet' });
           else {

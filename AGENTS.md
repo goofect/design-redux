@@ -144,9 +144,11 @@ something away.
   glyphs (`glyph(el, name)`). State is the element's ARIA attribute; the
   styles read nothing else. The pieces draw what things are: a list a `ul`
   of `li`, the properties a `dl` (a date a `time`), a pane's or section's
-  title a heading, the sidebar a `nav`, a page a `section`, search a
-  `search`. A region is named by `nameRegion`, never an `aria-label`, over
-  which Obsidian draws a tooltip.
+  title a heading, a group that folds a `details`, a sheet a modal `dialog`
+  (a `header` with its title, a `footer` of buttons), the sidebar a `nav`,
+  the library's page `main`, a note's head a `header`, search a `search`.
+  A region is named by `nameRegion`, never an `aria-label`, over which
+  Obsidian draws a tooltip.
 - The look: `body.dr-active` and a `dr-region-<name>` class a region, added
   to every window by `Appearance` and removed on unload. Rules on Obsidian's
   own DOM are gated by both and listed in the selector map at the top of the

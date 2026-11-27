@@ -118,17 +118,16 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(got.types).toContain('text/plain');
   });
 
-  it('keeps to the parts of Obsidian and the browser it leans on: a property\'s type, the drag manager, full screen, the voice, the rich clipboard', async function () {
+  it('keeps to the parts of Obsidian and the browser it leans on: a property\'s type, the drag manager, full screen, the rich clipboard', async function () {
     const got = await browser.executeObsidian(({ app }) => ({
       widget: typeof app.metadataTypeManager.getAssignedWidget,
       drag: [typeof app.dragManager.dragFile, typeof app.dragManager.dragFolder, typeof app.dragManager.onDragStart],
       full: typeof document.body.requestFullscreen,
-      voice: !!window.speechSynthesis && typeof SpeechSynthesisUtterance,
       clip: typeof ClipboardItem,
       picker: typeof HTMLInputElement.prototype.showPicker,
       fill: app.commands.commands['design-redux:fill-screen'].checkCallback(true),
     }));
-    expect(got).toEqual({ widget: 'function', drag: ['function', 'function', 'function'], full: 'function', voice: 'function', clip: 'function', picker: 'function', fill: true });
+    expect(got).toEqual({ widget: 'function', drag: ['function', 'function', 'function'], full: 'function', clip: 'function', picker: 'function', fill: true });
   });
 
   it('steps to the next note in its folder on two fingers sideways over the editor, and back the other way', async function () {
@@ -181,6 +180,41 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(said.answered).toBe(1);
     expect(said.notice).toBe('Not signed in to Test Drive: access was refused.');
     expect(said.signedIn).toBe(false);
+  });
+
+  it('opens a sheet as the browser\'s own modal dialog: named by its title, its groups disclosures, Obsidian\'s hotkeys held; Escape closes it', async function () {
+    const seen = await browser.executeObsidian(async ({ app }) => {
+      if (!app.vault.getAbstractFileByPath('Empty')) await app.vault.createFolder('Empty');
+      // Obsidian keeps a stack of scopes for each window: the sheet's is pushed on it, through the public pushScope.
+      const km = app.keymap;
+      window.__drScopes = { pushed: 0, popped: 0 };
+      const [push, pop] = [km.pushScope, km.popScope];
+      km.pushScope = function (scope) { window.__drScopes.pushed++; return push.call(this, scope); };
+      km.popScope = function (scope) { window.__drScopes.popped++; return pop.call(this, scope); };
+      window.__drScopes.restore = () => { km.pushScope = push; km.popScope = pop; };
+      app.commands.executeCommandById('design-redux:library-check');
+      await new Promise((r) => setTimeout(r, 300));
+      const d = document.querySelector('dialog.dr-sheet');
+      if (!d) return null;
+      const title = document.getElementById(d.getAttribute('aria-labelledby'));
+      const group = d.querySelector('details.dr-group');
+      return {
+        open: d.open, modal: d.matches(':modal'), title: title && title.textContent, parts: Array.from(d.children).map((c) => c.tagName),
+        group: group ? [group.open, group.querySelector('summary') && getComputedStyle(group.querySelector('summary')).listStyleType] : null,
+        held: window.__drScopes.pushed === 1, look: [getComputedStyle(d).borderTopStyle, getComputedStyle(d).borderTopLeftRadius, getComputedStyle(d).boxShadow],
+      };
+    });
+    expect(seen).not.toBe(null);
+    expect([seen.open, seen.modal, seen.title, seen.held]).toEqual([true, true, 'The library, looked over', true]);
+    expect(seen.parts).toEqual(['HEADER', 'DIV', 'FOOTER']);
+    expect(seen.group).toEqual([true, 'none']);
+    expect(seen.look).toEqual(['solid', '0px', 'none']);
+    await shot('sheet-dialog');
+    await browser.keys(['Escape']);
+    const gone = await readUntil(() => browser.execute(() => document.querySelectorAll('dialog.dr-sheet').length), (n) => n === 0);
+    expect(gone).toBe(0);
+    expect(await browser.execute(() => { const s = window.__drScopes; s.restore(); return s.popped; })).toBe(1);
+    await browser.executeObsidian(async ({ app }) => { const f = app.vault.getAbstractFileByPath('Empty'); if (f) await app.vault.delete(f, true); });
   });
 
   it('opens Obsidian\'s graph of a folder from its menu, its search the folder\'s path', async function () {

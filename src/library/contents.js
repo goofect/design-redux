@@ -7,7 +7,7 @@
 /* collection: no grid, no covers, no glyphs, counts or numbers.       */
 /* ------------------------------------------------------------------ */
 
-import { asButton, el } from '../core/dom.js';
+import { asButton, el, nameRegion } from '../core/dom.js';
 import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
 import { listedNotes, pins } from './order.js';
@@ -34,19 +34,6 @@ export function pinnedFirst(plugin, folder, list) {
   const pinned = pins(plugin).map((e) => e.path);
   const at = (e) => pinned.indexOf(e.path);
   return list.filter((e) => at(e) >= 0).sort((x, y) => at(x) - at(y)).concat(list.filter((e) => at(e) < 0));
-}
-
-/**
- * Names a region for a screen reader without an aria-label: Obsidian draws a
- * tooltip for every aria-label under the pointer. The name is unseen text the
- * region points at instead.
- */
-let named = 0;
-export function nameRegion(node, text) {
-  const label = el(node, 'span', 'dr-unseen', text);
-  label.id = `dr-region-name-${++named}`;
-  node.setAttribute('aria-labelledby', label.id);
-  return node;
 }
 
 /** The path to a folder as words, "Vault / Politics": each goes there; the last, ink, is where you are. */

@@ -78,7 +78,10 @@ const VAULT = {
       actions: [{ text: 'Cancel' }, { text: 'Make it' }],
     });
     sheet.open();
-    const node = sheet.contentEl.querySelector('.dr-sheet');
+    const node = sheet.dialog;
+    // The browser's own modal dialog: a header with its title (named by it), the matter, a footer of buttons.
+    assert.deepStrictEqual([node.tagName, ...Array.from(node.children).map((c) => c.tagName)], ['DIALOG', 'HEADER', 'DIV', 'FOOTER']);
+    assert.strictEqual(w.doc.getElementById(node.getAttribute('aria-labelledby')).textContent, 'New folder');
     assert.strictEqual(node.querySelectorAll('input').length, 2);
     assert.deepStrictEqual(Array.from(node.querySelectorAll('.dr-sheet-actions > .dr-button')).map((b) => [b.className, b.textContent]), [['dr-button', 'Cancel'], ['dr-button', 'Make it']]);
     sheet.close();
@@ -126,7 +129,8 @@ const VAULT = {
   check('no fill: what is open, picked or under the pointer is ink or underlined, never a block of ink or grey', () => {
     const wrong = [];
     // Allowed: selected text, and Obsidian's toggle, whose knob's place says on or off.
-    const allowed = (selector) => /::selection|\.checkbox-container/.test(selector);
+    // Drawn in ink or grey as data, not as a state's fill: selected text, a toggle, a progress bar's done and not done.
+    const allowed = (selector) => /::selection|\.checkbox-container|::-webkit-progress-(?:bar|value)/.test(selector);
     parts.forEach((p) => rules(part(p)).forEach(([selector, body]) => {
       if (/(?:^|;)\s*background(?:-color)?\s*:\s*var\(--dr-(?:ink|muted)\)/.test(body) && !allowed(selector)) wrong.push(`${p}: ${selector}`);
       (body.match(/--(?:tab-background-active|nav-item-background-[a-z]+|background-modifier-(?:hover|active-hover))\s*:\s*var\(--dr-(?:ink|muted)\)/g) || []).forEach((d) => wrong.push(`${p}: ${d}`));

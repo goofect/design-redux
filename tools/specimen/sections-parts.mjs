@@ -68,7 +68,8 @@ const menuItem = (title, cls = '') => `<div class="menu-item ${cls}"><div class=
 const state = (label, text, extra = '', cls = '', a = {}) => `<div class="dr-state ${cls}"${attrs(a)}><span class="dr-state-label dr-text">${label}</span>${text ? `<span class="dr-text dr-running dr-muted">${text}</span>` : ''}${extra}</div>`;
 
 export function blocks() {
-  const sheet = (title, text, inner, actions) => `<div class="modal"><div class="modal-close-button">${iconButton('close', 'Close')}</div><div class="modal-title">${title}</div><div class="modal-content"><div class="dr dr-sheet"><p class="dr-text dr-running">${text}</p>${inner}<div class="dr-sheet-actions">${actions}</div></div></div></div>`;
+  // The dialog as it is drawn open, kept in the page's flow (a modal one would stand over the specimen).
+  const sheet = (title, text, inner, actions) => `<dialog class="dr dr-sheet spec-dialog" open><header class="dr-sheet-head"><hgroup class="dr-sheet-titles"><h2 class="dr-sheet-title">${title}</h2><p class="dr-text dr-running">${text}</p></hgroup></header><div class="dr-sheet-matter">${inner}</div><footer class="dr-sheet-actions">${actions}</footer></dialog>`;
   return section('blocks', 'Head, menu, sheet, say-so', 'The larger pieces, parted by space: no line, no box.', [
     component('Head', 'A pane’s name, a label. No buttons.', [
       shown('a pane', `<div style="width:320px"><div class="dr-head"><span class="dr-head-name">Library</span></div></div>`),
@@ -76,7 +77,7 @@ export function blocks() {
     component('Menu', "Obsidian's own, flattened: rows of four units, words only; the one under the pointer or the keys underlined.", [
       shown('rest, selected, disabled, one that destroys', `<div class="menu"><div class="menu-scroll">${menuItem('Open')}${menuItem('New note here', 'selected')}${menuItem('Pin')}${menuItem('Move to…', 'is-disabled')}<div class="menu-separator"></div>${menuItem('Delete folder', 'is-warning')}</div></div>`),
     ]),
-    component('Sheet', "Obsidian's own modal, flattened: its title, the matter, then Cancel and the one that commits, last, as underlined words.", [
+    component('Sheet', "The browser's own modal dialog: its title a label, what it asks under it, the matter, then Cancel and the one that commits, last, as underlined words. No close glyph: Escape and Cancel.", [
       shown('a question', sheet('Move 12 notes to Archive', 'Links to them are rewritten. Undo puts them back.', `<div class="dr-field"><span class="dr-muted">Into</span><div class="dr-field-box"><input class="dr-input" type="text" value="Archive/2026"></div></div>`, `${button('Cancel')}${button('Move 12 notes')}`)),
       shown('one that destroys', sheet('Delete Seminar', 'The folder and its 14 notes go to the system bin.', '', `${button('Cancel')}${button('Delete folder')}`)),
     ]),

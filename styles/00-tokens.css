@@ -10,7 +10,7 @@
 /*                                                                     */
 /* Lines: a border is drawn only by these selectors: a field's line,   */
 /* and the edge of a layer that floats (tests/test_reset.js reads it): */
-/* lines: .dr-field-box input[type= textarea .popover .suggestion-container */
+/* lines: .dr-field-box input[type= textarea .popover .suggestion-container .dr-sheet */
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin

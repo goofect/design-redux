@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { asButton, clear, el } from '../core/dom.js';
+import { asButton, clear, el, nameRegion } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { ask } from '../ui/sheet.js';
 import { addProperty, addRow, drawLedger } from './ledger.js';
@@ -40,16 +40,21 @@ export function noteHeads(view) {
     const title = childOf(place, 'inline-title');
     let folder = childOf(place, 'dr-note-place');
     if (!folder) {
-      folder = doc.createElement('div');
+      // The way to the note's folder, over its title: a navigation.
+      folder = doc.createElement('nav');
       folder.className = 'dr dr-note-place';
     }
     const before = title || place.firstChild;
     if (folder.nextSibling !== before || folder.parentNode !== place) place.insertBefore(folder, before);
     let head = childOf(place, 'dr-note-head');
     if (!head) {
-      head = doc.createElement('div');
+      // Under the title, the note's header: its properties a section, its pages a navigation.
+      head = doc.createElement('header');
       head.className = 'dr dr-note-head';
-      ['dr-note-props', 'dr-note-pages'].forEach((cls) => el(head, 'div', cls));
+      // Named by unseen words in the header itself: the section and the navigation are emptied on each draw.
+      nameRegion(el(head, 'section', 'dr-note-props'), 'Properties', head);
+      nameRegion(el(head, 'nav', 'dr-note-pages'), 'Pages', head);
+      nameRegion(folder, 'Folder', head);
     }
     let after = title || folder;
     if (after.nextElementSibling && after.nextElementSibling !== head && after.nextElementSibling.classList.contains('metadata-container')) after = after.nextElementSibling;
@@ -64,7 +69,7 @@ export function tidyNoteHeads(view) {
     const folder = childOf(place, 'dr-note-place');
     if (folder && !folder.firstChild) folder.remove();
     const head = childOf(place, 'dr-note-head');
-    if (head && !Array.from(head.children).some((part) => part.firstChild)) head.remove();
+    if (head && !Array.from(head.children).some((part) => !part.classList.contains('dr-unseen') && part.firstChild)) head.remove();
   });
 }
 

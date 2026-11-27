@@ -61,6 +61,7 @@ h2{font:inherit}
 .spec-shown{display:grid;gap:8px;justify-items:start}
 .spec-thing{display:flex;align-items:center;min-height:32px}
 .spec-rows{width:320px}
+.spec-dialog{position:static;inset:auto;margin:0;width:400px}
 .spec-tight{padding:16px}
 .spec-glyphs{display:grid;grid-template-columns:repeat(auto-fill,112px);gap:24px 0}
 .spec-glyph{display:grid;justify-items:center;gap:8px}

@@ -39,6 +39,15 @@ exports.load = () => {
   return source;
 };
 exports.obsidian = obsidian;
+
+/** What is open over the workspace now, a sheet (the plugin's dialog) or one of Obsidian's modals (a picker), in the order opened. */
+exports.overlays = () => {
+  const all = [...obsidian.Modal.open, ...(source && source.Sheet ? source.Sheet.shown : [])];
+  const node = (m) => m.dialog || m.containerEl;
+  return all.filter((m) => node(m) && node(m).isConnected).sort((a, b) => (node(a).compareDocumentPosition(node(b)) & 4 ? -1 : 1));
+};
+/** The one in front. */
+exports.front = () => exports.overlays().slice(-1)[0];
 exports.window = window;
 
 /**

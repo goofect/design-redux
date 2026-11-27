@@ -6,12 +6,12 @@
  * menu and diagnostics.
  */
 const assert = require('assert');
-const { load, world, suite, settle, obsidian, window } = require('./harness.js');
+const { load, world, suite, settle, obsidian, window, front } = require('./harness.js');
 
 const dr = load();
 const check = suite('tools');
 const feature = (w, name) => w.plugin.features.find((f) => f.constructor.name === name);
-const answer = async (pick) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; pick(m); await settle(); };
+const answer = async (pick) => { await settle(); const m = front(); pick(m); await settle(); };
 const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 const props = (w, p) => w.plugin.notes.props(w.file(p));
 // A rule as settings keep it: { id, on, when, set, name }.
@@ -143,7 +143,7 @@ const VAULT = {
     const schemas = feature(w, 'PropertySchemas');
     assert.deepStrictEqual(schemas.faults(w.file('Logic/Sub/S.md')), [{ key: 'status', fault: 'required here, and missing' }, { key: 'week', fault: 'not a number' }]);
     assert.deepStrictEqual(schemas.check().map((x) => x.file.basename).sort(), ['G', 'S']);
-    obsidian.Modal.open[0].close();
+    front().close();
     const host = w.doc.createElement('div');
     dr.drawLedger(w.plugin, host, w.file('Logic/G.md'), () => {});
     const row = host.querySelector('.dr-prop[data-key="status"]');
@@ -153,7 +153,7 @@ const VAULT = {
   await check('the rules sheet: each rule its sentence and a toggle beside it, no numbers; a new one written as a sentence with fields', async () => {
     const w = await world(VAULT, { settingsVersion: 100, propertyRules: [keptRule({ kind: 'folder', folder: 'Reading' }, [{ key: 'shelf', value: 'reading' }])] });
     const sheet = feature(w, 'PropertyRules').edit();
-    const m = sheet.modalEl;
+    const m = sheet.dialog;
     const said = () => Array.from(m.querySelectorAll('.dr-rule-name')).map((n) => n.textContent);
     assert.deepStrictEqual(said(), ['When a note comes into Reading, set shelf to reading']);
     assert.ok(!m.querySelector('.dr-slot'), 'the rules are numbered');

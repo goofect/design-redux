@@ -10,7 +10,7 @@
 
 import { Feature } from '../core/feature.js';
 import { linkTarget, valuesOf } from '../core/notes.js';
-import { row, rows, sectionTitle } from '../ui/row.js';
+import { disclosure, row, rows } from '../ui/row.js';
 import { Sheet } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
 
@@ -55,8 +55,7 @@ export class LibraryCheck extends Feature {
       build: (matter, s) => {
         if (!found.length) return void sayso(matter, { label: 'Nothing to look at', text: 'No empty folder, no loose note, no link that leads nowhere.' });
         found.forEach((group) => {
-          sectionTitle(matter, { title: group.title });
-          const list = rows(matter);
+          const list = rows(disclosure(matter, { title: group.title }));
           group.items.slice(0, 50).forEach((item) => row(list, { name: item.name, end: item.end, run: () => {
             s.close();
             if (item.file) this.app.workspace.getLeaf(false).openFile(item.file);

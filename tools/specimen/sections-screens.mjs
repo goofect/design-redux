@@ -68,6 +68,12 @@ export async function screens() {
   await settle(6);
   const note = leaf.view.contentEl;
   // The editor's column as the plugin left it (folder, title, the head) with the open page's text in it.
+  // The HTML a note holds, as Obsidian draws it in reading view, its progress bar made a control by the plugin.
+  const noteHtml = '<div class="markdown-reading-view"><div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width"><div class="markdown-preview-sizer markdown-preview-section"><hgroup><h2>Logic</h2><p>A first course</p></hgroup>'
+    + '<p>Squares: x<sup>2</sup>; water: H<sub>2</sub>O.</p>'
+    + '<details open><summary>Proof</summary><p>By induction on the length of the derivation.</p></details>'
+    + '<details><summary>Exercises</summary><p>Twelve tables to build.</p></details>'
+    + '<p>Done so far: <progress class="dr-progress" role="slider" tabindex="0" value="3" max="5" aria-valuenow="3" aria-valuemax="5"></progress></p></div></div></div>';
   const sizer = note.querySelector('.cm-sizer').outerHTML.replace('<div class="cm-content"></div>', '<div class="cm-content"><p>A proof that the table and the rules agree: whatever the rules let you write from some premises, every row of the table that makes the premises true makes it true as well.</p><p>The other way round needs more, and it is the next chapter’s.</p></div>');
   const page = `<div class="spec-note"><div class="spec-note-text">${sizer}</div></div>`;
 
@@ -105,7 +111,7 @@ export async function screens() {
 
   // The rules sheet, and the settings page.
   const sheet = feature('PropertyRules').edit();
-  const rules = sheet.modalEl.outerHTML;
+  const rules = sheet.dialog.outerHTML.replace('<dialog class="dr dr-sheet"', '<dialog class="dr dr-sheet spec-dialog"');
   sheet.close();
   const tab = new dr.SettingsTab(w.app, w.plugin);
   tab.display();
@@ -127,8 +133,8 @@ export async function screens() {
   w.plugin.unload();
   return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. Two panes on the ground, no frame, no line: labels in capitals, parted by space. The sidebar: VAULT and SETTINGS, then the folders, grey but the one open. The page: the path, the folders above grey and this one black, then only the notes in it.',
     `<div class="spec-states is-close">${frame('the sidebar, a folder open', 320, 560, sidebarFolder, 'is-side')}${frame('a folder, in the page', 640, 560, folderPage)}</div>`)
-    + section('screens-note', 'The note', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it the ledger, each property a row, its name a grey label and its value ink, edited where it stands (a value its folder’s schema finds wrong is red, with why); its pages as words, grey, the open one ink; space; the text. No control, no heading, no panel.',
-    `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}</div>`)
+    + section('screens-note', 'The note', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it the ledger, each property a row, its name a grey label and its value ink, edited where it stands (a value its folder’s schema finds wrong is red, with why); its pages as words, grey, the open one ink; space; the text. No control, no heading, no panel. Beside it, the HTML a note may hold: a heading group, its line grey; superscript and subscript; a disclosure open and one folded, an ellipsis after it; a progress bar the person sets, done in ink and the rest grey.',
+    `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the HTML a note holds, in reading view', 560, 560, noteHtml, 'is-note')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',
       `<div class="spec-states is-close">${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
     + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked underlined, a folded branch marked +. The 3D graph: ink squares on lines; the picked note and the open one larger, inverted.',

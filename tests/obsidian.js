@@ -276,6 +276,7 @@ class App {
     this.metadataCache = new MetadataCache(this);
     this.fileManager = new FileManager(this);
     this.workspace = new Workspace(this, doc);
+    this.keymap = { scopes: [], pushScope(scope) { this.scopes.push(scope); }, popScope(scope) { this.scopes = this.scopes.filter((x) => x !== scope); } };
     this.commands = { commands: {}, executeCommandById: (id) => { const c = this.commands.commands[id]; if (!c) return false; if (c.checkCallback) return c.checkCallback(false) !== false; if (c.callback) c.callback(); return true; } };
     this.lastEvent = null;
     this.appId = 'a1b2c3d4e5f60718';
@@ -330,6 +331,7 @@ class Plugin extends Component {
   registerHoverLinkSource() {}
 }
 
+class Scope { constructor(parent) { this.parent = parent; this.keys = []; } register(mods, key, fn) { const k = { mods, key, fn }; this.keys.push(k); return k; } unregister(k) { this.keys = this.keys.filter((x) => x !== k); } }
 class Modal {
   constructor(app) { this.app = app; const d = app.workspace.doc; this.containerEl = d.createElement('div'); this.containerEl.className = 'modal-container'; this.modalEl = this.containerEl.appendChild(d.createElement('div')); this.modalEl.className = 'modal'; this.titleEl = this.modalEl.appendChild(d.createElement('div')); this.titleEl.className = 'modal-title'; this.contentEl = this.modalEl.appendChild(d.createElement('div')); this.contentEl.className = 'modal-content'; }
   setTitle(t) { this.titleEl.textContent = t; return this; }
@@ -480,7 +482,7 @@ requestUrl.log = [];
 const debounce = (fn) => { const run = (...a) => fn(...a); run.cancel = () => {}; run.run = run; return run; };
 
 module.exports = {
-  Events, TAbstractFile, TFile, TFolder, Vault, MetadataCache, FileManager, Component, Workspace, WorkspaceLeaf, App,
+  Scope, Events, TAbstractFile, TFile, TFolder, Vault, MetadataCache, FileManager, Component, Workspace, WorkspaceLeaf, App,
   View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, AbstractInputSuggest, Menu, MenuItem, Setting, PluginSettingTab, Notice, ToggleComponent, DropdownComponent,
   addIcon, removeIcon, setIcon, requestUrl, editorInfoField, editorLivePreviewField, MarkdownRenderer, MarkdownRenderChild, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
   Platform: { isMobile: false, isDesktop: true, isDesktopApp: true, isMacOS: true },

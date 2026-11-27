@@ -102,15 +102,25 @@
   flex: 1;
 }
 
-/* A title that folds its group is pressed itself. */
-.dr-section > [aria-expanded] {
+/* A group that folds is the browser's own disclosure: its summary is a section's title, pressed
+   itself; no triangle, and folded, an ellipsis after its words. */
+.dr-group > summary.dr-section {
+  list-style: none;
   cursor: pointer;
+}
+
+.dr-group > summary.dr-section::-webkit-details-marker {
+  display: none;
+}
+
+.dr-group:not([open]) > .dr-section > .dr-section-name::after {
+  content: "…";
 }
 
 @media (any-hover: hover) {
   .dr-row:not([aria-disabled="true"]):hover > .dr-row-name,
   .dr-prop[tabindex]:hover > .dr-prop-value,
-  .dr-section > [aria-expanded]:hover {
+  .dr-group > summary.dr-section:hover > .dr-section-name {
     text-decoration: underline;
     text-underline-offset: var(--dr-ring);
   }
